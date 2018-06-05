@@ -1,0 +1,101 @@
+package com.dw.queue.jms;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.dw.queue.dao.*;
+import com.dw.queue.entity.*;
+import com.dw.queue.entity.Number;
+import com.dw.queue.enums.QueueMsgTypeEnum;
+import com.dw.queue.mybatis.MyBatisSqlSessionFactory;
+import com.dw.queue.system.SystemApp;
+import com.dw.queue.utils.DateUtil;
+import com.dw.queue.utils.JdbcUtils;
+import org.apache.ibatis.session.SqlSession;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageListener;
+import javax.jms.TextMessage;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class ReceiveMessageListener implements MessageListener {
+	@Override
+	public void onMessage(Message message) {
+		synchronized (this) {
+			TextMessage textMessage = (TextMessage) message;
+			try {
+				String msg = textMessage.getText();
+				// 根据接收消息不通类型执行任务
+				JSONObject jsonObject = JSON.parseObject(msg);
+				String type = jsonObject.getString("type");
+				if (type.equals(QueueMsgTypeEnum.TAKENUMBERUPLOAD.getValue())) { // 取号 -- API发送给叫号
+					String cardNo = jsonObject.getString("cardNo");
+					String marketCode = jsonObject.getString("marketCode");
+					String openTypeCode = jsonObject.getString("openTypeCode");
+					String numberCode = jsonObject.getString("numberCode");
+					String persons = jsonObject.getString("persons");
+					String periodCode = jsonObject.getString("periodCode");
+					String serial = jsonObject.getString("serial");
+					SqlSession session = MyBatisSqlSessionFactory.getSqlSessionFactory().openSession();
+					// 查询市别
+					Market market = session.getMapper(MarketMapper.class).queryByCode(marketCode);
+					// 查询开放类别
+					OpenType openType = session.getMapper(OpenTypeMapper.class).queryByCode(openTypeCode);
+					// 查询人数
+					Number number = session.getMapper(NumberMapper.class).queryByCode(numberCode);
+					// 时段
+					Period period = session.getMapper(PeriodMapper.class).queryByCode(periodCode);
+					if (market != null && openType != null && number != null && period != null) {
+						// 查询是否已经入座，防止重复取号
+						Queue queue = session.getMapper(QueueMapper.class).queryBySerial(cardNo, market.getId(), openType.getId(), number.getId(), period.getId(), serial);
+						if (queue == null) {
+							/**
+							 * 取号
+							 */
+							// 查询当前字段当前人数
+							int count = session.getMapper(QueueMapper.class).queryCount(number.getPrefix(), period.getId(), DateUtil.getFullDate_()) + 1;
+							String code = number.getPrefix() + (count > 9 ? count : "0" + count);
+							Queue insertQueue = new Queue("WAP", code, DateUtil.getFullTime(), Integer.parseInt(persons), market.getId(), openType.getId(), number.getId(), period.getId(), 0, cardNo, serial);
+							session.getMapper(QueueMapper.class).insert(insertQueue);
+							Map<String, Object> retData = new HashMap<>();
+							if (insertQueue.getId() > 0) { // 取号成功，返回MQ
+								retData.put("serial", serial);
+								retData.put("code", code);
+								retData.put("type", QueueMsgTypeEnum.TAKENUMBERSUCCESS.getValue());
+								retData.put("status", 1);
+								retData.put("result", 1);
+							} else { // 取号失败
+								retData.put("serial", serial);
+								retData.put("code", null);
+								retData.put("type", QueueMsgTypeEnum.TAKENUMBERSUCCESS.getValue());
+								retData.put("status", 1);
+								retData.put("result", -1);
+							}
+							JmsProducerFactory.send(SystemApp.MQ_DESTINATION, JSON.toJSONString(retData));
+							// 刷新面板
+							SystemApp.app.updateMarket(SystemApp.marketId);
+						}
+					}
+					session.close();
+				} else if (type.equals(QueueMsgTypeEnum.DELETENUMBERUPLOAD.getValue())) {
+					SqlSession session = MyBatisSqlSessionFactory.getSqlSessionFactory().openSession();
+
+					String cardNo = jsonObject.getString("cardNo");
+					String serial = jsonObject.getString("serial");
+					session.getMapper(QueueMapper.class).delete(cardNo, serial);
+					session.getMapper(QueuePersonsMapper.class).delete(serial);
+					// 事務處理，統一提交，通過session控制事務
+					session.commit();
+					session.close();
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}

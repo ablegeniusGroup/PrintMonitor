@@ -1,0 +1,26 @@
+package pos.dongwang.dto;
+
+/**
+ * Created by wenjing on 2017/11/3.
+ */
+public class IsBilledDto {
+    //TRUE 为已经结账，已付款，FALSE 已结账，未付款
+    private String settled;
+
+
+
+    public IsBilledDto(String settled) {
+        this.settled = settled;
+    }
+
+    public IsBilledDto() {
+    }
+
+    public String getSettled() {
+        return settled;
+    }
+
+    public void setSettled(String settled) {
+        this.settled = settled;
+    }
+}

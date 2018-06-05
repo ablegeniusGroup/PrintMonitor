@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pos.dongwang.mapper.TopButtonDtoMapper">
+
+    <resultMap id="TopButtonResultMap" type="pos.dongwang.dto.TopButtonDto">
+        <result column="ID" property="ID" />
+        <result column="NAME1" property="NAME1"></result>
+        <result column="NAME2" property="NAME2"></result>
+    </resultMap>
+
+  <!--  <select id="getLineByBarcode" resultType="java.lang.String">
+     select LINE from BARCODE where BARCODE = #{outlet}
+    </select>-->
+
+    <select id="getTopButtons" resultMap="TopButtonResultMap">
+      select * from TOP_BUTTON
+    </select>
+</mapper>

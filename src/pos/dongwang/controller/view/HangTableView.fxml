@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.control.Button?>
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="background" stylesheets="@HangTable.css" xmlns="http://javafx.com/javafx/8.0.72" xmlns:fx="http://javafx.com/fxml/1" fx:controller="pos.dongwang.controller.HangTableController">
+   <children>
+      <FlowPane styleClass="titleFlowPane">
+         <children>
+            <Label text="请选择以下挂起的台号" styleClass="titleLabel" />
+         </children>
+      </FlowPane>
+      <FlowPane fx:id="tablesFlowPane">
+         <children>
+
+         </children>
+      </FlowPane>
+      <FlowPane fx:id="buttomFlowPane" styleClass="buttomFlowPane">
+         <children>
+         <Button text="關閉" fx:id="closeButton" styleClass="functionButton"></Button>
+         <Button text="上一頁" fx:id="upPageButton" styleClass="functionButton" onAction="#previousPage"></Button>
+         <Button text="下一頁" fx:id="downPageButton" styleClass="functionButton" onAction="#nextPage"></Button>
+         </children>
+      </FlowPane>
+   </children>
+</VBox>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="172.0" prefWidth="223.0" style="-fx-alignment: center; -fx-text-alignment: center" styleClass="background" stylesheets="@Confirm.css" xmlns="http://javafx.com/javafx/8.0.72" xmlns:fx="http://javafx.com/fxml/1" fx:controller="pos.dongwang.controller.ConfirmController">
+   <children>
+      <AnchorPane fx:id="titleAnchorPane">
+         <children>
+            <Label fx:id="labelTitle" text="提示！" />
+         </children>
+      </AnchorPane>
+      <AnchorPane fx:id="contentAnchorPane" style="-fx-text-alignment: center;-fx-alignment: center">
+         <children>
+            <Label fx:id="contentLabel" style="-fx-alignment: center" />
+         </children>
+      </AnchorPane>
+      <ToolBar fx:id="toolBar" style="-fx-background-color: darkred;"/>
+   </children>
+</VBox>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.control.Button?>
+<FlowPane maxHeight="-Infinity"  maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" styleClass="flowPane" stylesheets="@Warning.css" xmlns="http://javafx.com/javafx/8.0.72" xmlns:fx="http://javafx.com/fxml/1" >
+   <children>
+      <Label   styleClass="titleLabel"  />
+      <Label   styleClass="contentLabel" />
+      <FlowPane styleClass="buttomFlowPane">
+         <children>
+            <Button text="確定" styleClass="button"></Button>
+         </children>
+      </FlowPane>
+   </children>
+</FlowPane>

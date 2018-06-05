@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="pos.dongwang.mapper.RtLogMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="RtLogResultMap" type="pos.dongwang.dto.RtLogDto">
+        <result column="BARCODE"  property="barcode" />
+        <result column="RT_OP_DATE"  property="rtOpDate" />
+        <result column="RT_OP_TIME"  property="rtOpTime" />
+        <result column="S_CODE"  property="sCode" />
+        <result column="LOG_T"  property="logT" />
+        <result column="TYPE"  property="type" />
+        <result column="RT_T_IDX"  property="rtTIdx" />
+        <result column="BILL_NO"  property="billNO" />
+        <result column="SUB_NO"  property="subNo" />
+        <result column="TABLE1"  property="table1" />
+        <result column="TABLE2"  property="table2" />
+        <result column="SEAL_COUNT1"  property="sealCount1" />
+        <result column="SEAL_COUNT2"  property="sealCount2" />
+        <result column="SEAL_COUNT3"  property="sealCount3" />
+        <result column="AMT1"  property="amt1" />
+        <result column="AMT2"  property="amt2" />
+        <result column="AMT3"  property="amt3" />
+        <result column="REMARK1"  property="remark1" />
+        <result column="REMARK2"  property="remark2" />
+        <result column="REMARK3"  property="remark3" />
+        <result column="REMARK4"  property="remark4" />
+        <result column="DAYEND_IDX" property="dayendIdx" />
+    </resultMap>
+
+    <insert id="insertTLog">
+        INSERT INTO LOG (BARCODE,RT_OP_DATE,RT_OP_TIME,S_CODE,LOG_T,RT_T_IDX,BILL_NO,SUB_NO,TABLE1,[TYPE],REMARK1)
+        VALUES ( #{outlet},#{opDate},#{opTime},#{staff},#{logT},#{tranIndex},#{newRef},'00',#{tableNum},#{type},#{remark1})
+    </insert>
+</mapper>

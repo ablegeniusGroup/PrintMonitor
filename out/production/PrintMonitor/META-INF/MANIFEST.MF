@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+Class-Path: RXTXcomm.jar c3p0-0.9.1.2.jar sqljdbc4-4.0.jar mybatis-3.4
+ .5.jar httpcore-4.4.6.jar httpclient-4.5.1.jar slf4j-api-1.7.25.jar l
+ ogback-core-1.2.3.jar commons-logging-1.2.jar logback-access-1.2.3.ja
+ r logback-classic-1.2.3.jar mssql-jdbc-6.3.4.jre8-preview.jar
+Main-Class: pos.dongwang.Main
+

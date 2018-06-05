@@ -1,0 +1,364 @@
+package pos.dongwang.util;
+
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.scene.paint.Color;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.ibatis.session.SqlSession;
+import pos.dongwang.Main;
+import pos.dongwang.dao.OrderHangListDao;
+import pos.dongwang.dao.PosOrderDao;
+import pos.dongwang.dto.PosOrderDto;
+import pos.dongwang.dto.RulerDto;
+import pos.dongwang.enums.OrderType;
+import pos.dongwang.enums.PrintStateEnum;
+import pos.dongwang.mapper.OrderHangListMapper;
+import pos.dongwang.model.PosOrder;
+import pos.dongwang.mybatis.MyBatisSqlSessionFactory;
+import pos.dongwang.print.GetPrintOrReportStr;
+import pos.dongwang.print.PrintRxTxVirtaul;
+import pos.dongwang.properties.ReadProperties;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.*;
+
+/**
+ * Created by lodi on 2017/11/22.
+ */
+public class CommonPrintTask {
+
+    private static CommonPrintTask  instance;
+    public static boolean isInit = false;
+    public static boolean isInitHang = false;
+    private CommonPrintTask  (){}
+
+    public static CommonPrintTask  getInstance() {
+        if (instance == null) {
+            instance = new CommonPrintTask ();
+        }
+        return instance;
+    }
+
+
+
+
+    public static synchronized void execute(Main main, String receivePrinter, Integer showCount, String timeInterval) {
+      // testPing(main);
+       SqlSession sqlSession = SqlSessionUtil.getSqlSession();
+       Integer size = PosOrderDao.otheridxs.size();
+        try {
+            Map<String, List<PosOrderDto>> posmap = new HashMap<>();
+            Map<String, List<PosOrderDto>> posHangMap = new HashMap<>();
+            String[] printers = null;
+            if (receivePrinter != null && !"".equals(receivePrinter.trim())) {
+                printers = receivePrinter.split(",");
+            }
+            if (!isInit) {
+                posmap = PosOrderDao.getInstance().getPosOrderListInit(Arrays.asList(printers), timeInterval);
+                System.out.println("--------------------------------------");
+                isInit = true;
+
+            } else {
+                posmap = PosOrderDao.getInstance().getPosOrderList(Arrays.asList(printers), timeInterval);
+                System.out.println("**********************************************");
+            }
+            if(!isInitHang){
+                 posHangMap = PosOrderDao.getInstance().getHangPosOrderList(Arrays.asList(printers), timeInterval);
+                if(AppUtils.isNotBlank(posHangMap)){
+                    main.setHangBoxTotal("掛起("+posHangMap.size()+")");
+                    main.setOrderHangCount(posHangMap.size());
+                    Iterator<Map.Entry<String, List<PosOrderDto>>> it = posHangMap.entrySet().iterator();
+                    while (it.hasNext()) {
+                        Map.Entry<String, List<PosOrderDto>> entry = it.next();
+                        System.out.println("key= " + entry.getKey() + " and value= " + entry.getValue());
+                        List<PosOrderDto> posmaplist = entry.getValue();
+                        ObservableList<PosOrder> posOrderData = FXCollections.observableArrayList();
+                        for (PosOrderDto posDetail : posmaplist) {
+                            // System.out.println("臺號" + k + "組別:" + finalI + " 單號：" + posDetail.getBill_no() + " 食品：" + posDetail.getName1());
+                            posOrderData.add(new PosOrder(posDetail.getBill_no(), posDetail.getSub_no(), posDetail.getType(), posDetail.getTable_no(), posDetail.getGoodsno(),
+                                    posDetail.getOrder_idx(), posDetail.getName1(), posDetail.getPrint_info(), DateUtil.getFormatDay(posDetail.getRt_op_date()), DateUtil.getFormatTime(posDetail.getRt_op_time()), posDetail.getS_code(), posDetail.getSeal_count(), posDetail.getAmt().doubleValue(), PrintStateEnum.HANG.getValue(), posDetail.getSingle_prt(), posDetail.getT_kic_msg(), posDetail.getPos_id(), posDetail.getPrint_name(), posDetail.getBarcode(), posDetail.getStaff(), posDetail.getZone(), posDetail.getR_desc(), posDetail.getPrint_msg(), posDetail.getRegion_id(), posDetail.getPerson_num(), posDetail.getAtt_name(), posDetail.getOrder_type(), posDetail.getIn_date()));
+                        }
+                        main.getHangOrderBoxs().add(posOrderData);
+                    }
+                }
+                isInitHang = true;
+            }
+
+            System.out.println("xxxxxxxxxxxxxxxxxxxxxxxxxxxx: "+ posmap.size());
+            Iterator<Map.Entry<String, List<PosOrderDto>>> it = posmap.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<String, List<PosOrderDto>> entry = it.next();
+                System.out.println("key= " + entry.getKey() + " and value= " + entry.getValue());
+                List<PosOrderDto> posmaplist = entry.getValue();
+                ObservableList<PosOrder> posOrderData = FXCollections.observableArrayList();
+                if(AppUtils.isNotBlank(posmaplist) && main.getAutoPrint().equals("OFF")){
+                   //ObservableList<ObservableList<PosOrder>> posOrderMap = main.getOrderBoxs();
+                    List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+                    nvps.add(new BasicNameValuePair("refNum", posmaplist.get(0).getIn_date()+posmaplist.get(0).getBill_no()));
+                    nvps.add(new BasicNameValuePair("subRef",posmaplist.get(0).getSub_no()));
+                    nvps.add(new BasicNameValuePair("companyId",ReadProperties.readStringByKey("companyId")));
+                    nvps.add(new BasicNameValuePair("outline",ReadProperties.readStringByKey("outline")));
+                    nvps.add(new BasicNameValuePair("outlet",ReadProperties.readStringByKey("outlet")));
+                    nvps.add(new BasicNameValuePair("tableNum",posmaplist.get(0).getTable_no()));
+                    nvps.add(new BasicNameValuePair("printState",PrintStateEnum.PREPRINT.getValue()));
+                    SendUtils.sendRequest(ReadProperties.readStringByKey("printStateUrl"),nvps);
+                }
+                for (PosOrderDto posDetail : posmaplist) {
+                    // System.out.println("臺號" + k + "組別:" + finalI + " 單號：" + posDetail.getBill_no() + " 食品：" + posDetail.getName1());
+                    posOrderData.add(new PosOrder(posDetail.getBill_no(), posDetail.getSub_no(), posDetail.getType(), posDetail.getTable_no(), posDetail.getGoodsno(),
+                            posDetail.getOrder_idx(), posDetail.getName1(), posDetail.getPrint_info(), DateUtil.getFormatDay(posDetail.getRt_op_date()), DateUtil.getFormatTime(posDetail.getRt_op_time()), posDetail.getS_code(), posDetail.getSeal_count(), posDetail.getAmt().doubleValue(), PrintStateEnum.PREPRINT.getValue(), posDetail.getSingle_prt(), posDetail.getT_kic_msg(), posDetail.getPos_id(), posDetail.getPrint_name(), posDetail.getBarcode(), posDetail.getStaff(), posDetail.getZone(), posDetail.getR_desc(), posDetail.getPrint_msg(), posDetail.getRegion_id(), posDetail.getPerson_num(), posDetail.getAtt_name(), posDetail.getOrder_type(),posDetail.getIn_date()));
+                    PrintStateEnum oldPrintState = PrintStateEnum.getPrintStateEnumByValue(posDetail.getPrint_state());
+                    if(PosOrderDao.otheridxs.containsKey(posDetail.getOrder_idx())){
+                        List<PosOrderDto> posOrderDtoList = PosOrderDao.otheridxs.get(posDetail.getOrder_idx());
+                        posOrderDtoList.forEach(posOrderDto -> {
+                            PrintStateEnum otherOldPrintState = PrintStateEnum.getPrintStateEnumByValue(posOrderDto.getPrint_state());
+                            PosOrderDao.updataPrintState(sqlSession,PrintStateEnum.PREPRINT, otherOldPrintState, posOrderDto.getBill_no(), posOrderDto.getOrder_idx(), posOrderDto.getType());
+                        });
+                    }
+                    synchronized (PosOrderDao.class) {
+                        PosOrderDao.updataPrintState(sqlSession,PrintStateEnum.PREPRINT, oldPrintState, posDetail.getBill_no(), posDetail.getOrder_idx(), posDetail.getType());
+                    }
+                }
+                if(PrintStateEnum.HANG.getValue().equals(posmaplist.get(0).getPrint_state())){
+                    OrderHangListDao.deleteOrderHangListByRefNum(sqlSession,posmaplist.get(0).getBill_no());
+                    for(int i = 0;i< main.getHangOrderBoxs().size();i++ ){
+                            if(main.getHangOrderBoxs().get(i).get(0).getBill_no().equals(posmaplist.get(0).getBill_no())){
+                                main.getHangOrderBoxs().remove(main.getHangOrderBoxs().get(i));
+                                main.setOrderHangCount(main.getOrderHangCount()-1);
+                                int finalI = i;
+                                if(PrintStateEnum.HANG.getValue().equals(main.getSelectedOrderType())){
+                                    Platform.runLater(() -> main.getFlowPane().getChildren().remove(finalI));
+                                }
+                                main.setHangBoxTotal("掛起"+"("+ main.getOrderHangCount()+")");
+                            }
+                    }
+
+                }
+                String o = main.getAutoPrint();
+                if (main.getAutoPrint().equals("ON")) {
+                    System.out.println("print_______________________");
+                    List<String> list = new LinkedList<String>();
+                    posOrderData.forEach(posOrder -> {
+                        list.add(posOrder.getName1() + "|R" + posOrder.getSeal_count() + "|R" + posOrder.getPrint_msg());
+//                        if(AppUtils.isNotBlank(posOrder.getPrint_msg())){
+//                            list.add("-"+posOrder.getPrint_msg().replace("\n",",")+ "|R");
+//                        }
+
+                    });
+
+                    String[] tableStyle = {
+                            "~0,90,35,85",
+                            "#BIG",
+                            "#CENTER",
+                            "$PRN_NAM| |ORDER_TYPE",
+                            "#GOHEAD1",
+                            "$檯號：|TABLE_NAM| 區域：|ZONE",
+                            "#GOHEAD1",
+                            "#SMALL",
+                            "#LEFT",
+                            "$賬單編號：|REF_NUM| 人數：|PERSON",
+                            "$BARCODE|/|STATION|-|STAFF| |POSDATE",
+                            "#R|3|COMPART",
+                            "* 菜品名稱|R數量|R備註",
+                            "#R|3|COMPART",
+                            "%ORDERLIST",
+                            "#R|3|COMPART",
+                            "#GOHEAD5",
+                            "#CUTPAPER"
+                    };
+                    HashMap<String, String> printmessage = new HashMap<String, String>();
+                    printmessage.put("PRN_NAM", posOrderData.get(0).getPrint_name());
+                    printmessage.put("TABLE_NAM", posOrderData.get(0).getTable_no());
+                    printmessage.put("BARCODE", posOrderData.get(0).getBarcode());
+                    printmessage.put("STATION", posOrderData.get(0).getPos_id());
+                    printmessage.put("ZONE", posOrderData.get(0).getZone());
+                    printmessage.put("REF_NUM", posOrderData.get(0).getBill_no());
+                    printmessage.put("STAFF", posOrderData.get(0).getStaff());
+                    printmessage.put("PERSON", String.valueOf(posOrderData.get(0).getPerson_num()));
+                    printmessage.put("ORDER_TYPE", posOrderData.get(0).getOrder_type());
+                    printmessage.put("POSDATE", posOrderData.get(0).getRt_op_time());
+                    String print = GetPrintOrReportStr.TranslateTableStyle(tableStyle, list, null, 1, printmessage);
+                    try {
+                         String printMsg = PrintRxTxVirtaul.getInstance().PrinterCheck();
+                        if (AppUtils.isNotBlank(printMsg)) {
+                            Platform.runLater(() -> main.crateAlert("錯誤", "打印機異常", printMsg));
+                        } else {
+                            try {
+                                PrintRxTxVirtaul.getInstance().localPrint(print);
+                            } catch (IOException e) {
+                                Platform.runLater(() -> main.crateAlert("錯誤", "打印機異常", printMsg));
+                                return;
+                            }
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Platform.runLater(() ->main.crateAlert("錯誤", "打印機異常",""));
+                        return;
+                    }
+                    posOrderData.forEach(posDetail -> {
+                        synchronized (PosOrderDao.class) {
+                            PrintStateEnum oldPrintState = PrintStateEnum.getPrintStateEnumByValue(posDetail.getPrint_state());
+                            if(PosOrderDao.otheridxs.containsKey(posDetail.getOrder_idx())){
+                                List<PosOrderDto> posOrderDtoList = PosOrderDao.otheridxs.get(posDetail.getOrder_idx());
+                                posOrderDtoList.forEach(posOrderDto -> {
+                                    PosOrderDao.updatePrintStateWithoutOldPrintState(sqlSession,PrintStateEnum.PRINTED, posOrderDto.getBill_no(), posOrderDto.getOrder_idx(), posOrderDto.getType());
+                                });
+                                PosOrderDao.otheridxs.remove(posDetail.getOrder_idx());
+                            }
+                            PosOrderDao.updataPrintState(sqlSession,PrintStateEnum.PRINTED, oldPrintState, posDetail.getBill_no(), posDetail.getOrder_idx(), posDetail.getType());
+                        }
+                    });
+                    main.getPosOrderData().remove(posOrderData);
+                    Boolean flag = false;
+                    for(ObservableList<PosOrder> posOrderObservableList :  main.getPosOrderData() ){
+                        if(AppUtils.isNotBlank(posOrderObservableList)){
+                            if(posOrderObservableList.get(0).getBill_no().equals(posOrderData.get(0).getBill_no())){
+                                flag = true;
+                            }
+                        }
+                    }
+                    for(ObservableList<PosOrder> selectedPosOrderObservableList :main.getSelectedOrderBoxs()){
+                        if(AppUtils.isNotBlank(selectedPosOrderObservableList )){
+                            if(selectedPosOrderObservableList .get(0).getBill_no().equals(posOrderData.get(0).getBill_no())){
+                                flag = true;
+                            }
+                        }
+                    }
+                    if(!flag){
+                        List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+                        nvps.add(new BasicNameValuePair("refNum",posOrderData.get(0).getIn_date()+posOrderData.get(0).getBill_no()));
+                        nvps.add(new BasicNameValuePair("subRef",posOrderData.get(0).getSub_no()));
+                        nvps.add(new BasicNameValuePair("companyId",ReadProperties.readStringByKey("companyId")));
+                        nvps.add(new BasicNameValuePair("outline",ReadProperties.readStringByKey("outline")));
+                        nvps.add(new BasicNameValuePair("outlet",ReadProperties.readStringByKey("outlet")));
+                        nvps.add(new BasicNameValuePair("tableNum",posOrderData.get(0).getTable_no()));
+                        nvps.add(new BasicNameValuePair("printState",PrintStateEnum.PRINTED.getValue()));
+                        SendUtils.sendRequest(ReadProperties.readStringByKey("printStateUrl"),nvps);
+                    }
+                    break;
+                }
+                else {
+                    System.out.println("data_______________________");
+                    switch (posOrderData.get(0).getOrder_type()){
+                        case "首單":
+                            main.getFirstPosOrderData().add(posOrderData);
+                            break;
+                        case "加單":
+                            main.getAddPosOrderData().add(posOrderData);
+                            break;
+                        case "尾單":
+                            main.getLastPosOrderData().add(posOrderData);
+                            break;
+                        default:
+                            break;
+                    }
+                    main.getPosOrderData().add(posOrderData);
+                    insertPosOrdersToVBox(main);
+                    insertPosOrdersToCorrespondingBox(main);
+                }
+            }
+            if(main.getPosOrderData().size()>0 && main.getSelectedOrderBoxs().size()<4){
+                insertPosOrdersToVBox(main);
+            }
+            insertPosOrdersToCorrespondingBox(main);
+        } catch (Exception e) {
+            e.printStackTrace();
+            sqlSession.rollback();
+
+        }
+    };
+
+
+    public  static void insertPosOrdersToVBox(Main main){
+        RulerDto rulerDto = main.getRulerDto();
+        ObservableList<ObservableList<PosOrder>> selectedOrderBoxs = main.getSelectedOrderBoxs();
+        if(selectedOrderBoxs.size()<4 && main.getPosOrderData().size()>0){
+            if(!rulerDto.getFlag1()){
+                ObservableList<PosOrder> orders = main.getOrdersByType(OrderType.TAILORDER.getValue());
+                if(orders != null && orders.size() > 0){
+                    rulerDto.setFlag1(true);
+                    main.getPosOrderData().remove(orders);
+                    selectedOrderBoxs.add(orders);
+                }
+                else{
+                    rulerDto.setFlag1(true);
+                    insertPosOrdersToVBox(main);
+                }
+            }
+            else if(!rulerDto.getFlag2()){
+                ObservableList<PosOrder> orders = main.getOrdersByType(OrderType.TAILORDER.getValue());
+                if(orders != null && orders.size() > 0){
+                    rulerDto.setFlag2(true);
+                    main.getPosOrderData().remove(orders);
+                    selectedOrderBoxs.add(orders);
+                }
+                else{
+                    rulerDto.setFlag2(true);
+                    insertPosOrdersToVBox(main);
+                }
+            }
+            else if(!rulerDto.getFlag3()){
+                ObservableList<PosOrder> orders = main.getOrdersByType(OrderType.FIRSTORDER.getValue());
+                if(orders != null && orders.size() > 0){
+                    rulerDto.setFlag3(true);
+                    main.getPosOrderData().remove(orders);
+                    selectedOrderBoxs.add(orders);
+                }
+                else{
+                    rulerDto.setFlag3(true);
+                    insertPosOrdersToVBox(main);
+                }
+            }
+            else if(!rulerDto.getFlag4()){
+                ObservableList<PosOrder> orders = main.getOrdersByType(OrderType.ADDORDER.getValue());
+                main.reSetRulerDto();
+                if(orders != null && orders.size() > 0){
+                    main.getPosOrderData().remove(orders);
+                    selectedOrderBoxs.add(orders);
+                }
+                else{
+                    insertPosOrdersToVBox(main);
+                }
+            }
+        }
+
+    }
+
+    public static void insertPosOrdersToCorrespondingBox(Main main) {
+        ObservableList<ObservableList<PosOrder>> selectedFirstOrderBoxs = main.getSelectedFirstOrderBoxs();
+        ObservableList<ObservableList<PosOrder>> selectedAddOrderBoxs = main.getSelectedAddOrderBoxs();
+        ObservableList<ObservableList<PosOrder>> selectedLastOrderBoxs = main.getSelectedLastOrderBoxsOrderBoxs();
+        if(selectedFirstOrderBoxs.size()<4 && main.getFirstPosOrderData().size()>0){
+            ObservableList<PosOrder> firstOrders =   main.getFirstOrdersByType(OrderType.FIRSTORDER.getValue());
+            if(firstOrders != null && firstOrders.size() > 0){
+                selectedFirstOrderBoxs.add(firstOrders);
+                main.getFirstPosOrderData().remove(firstOrders);
+            }
+        }
+        if(selectedAddOrderBoxs.size()<4 && main.getAddPosOrderData().size()>0){
+            ObservableList<PosOrder> addOrders =   main.getAddOrdersByType(OrderType.ADDORDER.getValue());
+            if(addOrders != null && addOrders.size() > 0){
+                selectedAddOrderBoxs.add(addOrders);
+                main.getAddPosOrderData().remove(addOrders);
+            }
+        }
+        if(selectedLastOrderBoxs.size()<4 && main.getLastPosOrderData().size()>0){
+            ObservableList<PosOrder> lastOrders =   main.getLastOrdersByType(OrderType.TAILORDER.getValue());
+            if( lastOrders != null &&  lastOrders.size() > 0){
+                selectedLastOrderBoxs.add( lastOrders);
+                main.getLastPosOrderData().remove(lastOrders);
+            }
+        }
+    }
+
+
+
+
+
+}
+

@@ -1,0 +1,25 @@
+.background {
+    -fx-background-color: #F5F5F5;
+    -fx-text-alignment: center;
+}
+.titleLabel{
+    -fx-background-color: #27728A;
+    -fx-text-alignment: center;
+    -fx-font-size: 30px;
+    -fx-font-weight: bolder;
+    -fx-text-fill: white;
+}
+.titleFlowPane{
+    -fx-alignment: center;
+    -fx-background-color: #27728A;
+}
+.functionButton{
+    -fx-background-color: #27728A;
+    -fx-text-alignment: center;
+    -fx-font-size: 25px;
+    -fx-font-weight: bolder;
+    -fx-text-fill: white;
+}
+.buttomFlowPane{
+    -fx-alignment: center;
+}

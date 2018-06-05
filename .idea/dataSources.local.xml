@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="dataSourceStorageLocal">
+    <data-source name="SQL Server (Microsoft) - EPOT@192.168.90.200" uuid="d664336f-25ff-4afe-9e62-c53019d3701a">
+      <database-info product="Microsoft SQL Server" version="10.50.1600" jdbc-version="4.0" driver-name="Microsoft JDBC Driver 4.0 for SQL Server" driver-version="4.0.2206.100">
+        <extra-name-characters>$#@</extra-name-characters>
+        <identifier-quote-string>&quot;</identifier-quote-string>
+      </database-info>
+      <case-sensitivity plain-identifiers="mixed" quoted-identifiers="mixed" />
+      <secret-storage>memory</secret-storage>
+      <user-name>sa</user-name>
+      <introspection-scope>EPOT:*|*:dbo</introspection-scope>
+      <resolve-scope>EPOT:*</resolve-scope>
+    </data-source>
+  </component>
+</project>

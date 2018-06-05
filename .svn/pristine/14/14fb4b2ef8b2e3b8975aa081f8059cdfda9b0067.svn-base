@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <settings>
+        <setting name="logPrefix" value="mapper."/>
+    </settings>
+
+    <typeAliases>
+      <package name="pos.dongwang.dto"/>
+    </typeAliases>
+
+    <environments default="development">
+        <environment id="development">
+            <transactionManager type="JDBC"/>
+			<dataSource type="pos.dongwang.mybatis.C3P0DataSourceFactory">
+                <property name="driverClass" value="com.microsoft.sqlserver.jdbc.SQLServerDriver" />
+                <property name="jdbcUrl" value="jdbc:sqlserver://192.168.90.200:1433;DatabaseName=Taoheung200101"/>
+                <property name="user" value="sa" />
+                <property name="password" value="Taoheung2014" />
+                <!-- 连接池初始化大小为3 -->
+                <property name="initialPoolSize" value="3"/>
+                <!-- 连接池最大为10 -->
+                <property name="maxPoolSize" value="10"/>
+                <!-- 连接池最小为3 -->
+                <property name="minPoolSize" value="3"/>
+                <!-- 连接池在无空闲连接可用时一次性最多创建的新数据库连接数  -->
+                <property name="acquireIncrement" value="5"/>
+                <!-- 连接的最大空闲时间，如果超过这个时间（秒），某个数据库连接还没有被使用，则会断开这个连接。如果为0，则永远不会断开连接,即回收此连接 -->
+                <property name="maxIdleTime" value="30"/>
+                <!-- 最大的Statement数量 -->
+                <property name="maxStatements" value="500"/>
+                <!-- 每个连接启动的最大Statement数量 -->
+                <property name="maxStatementsPerConnection" value="50"/>
+                <!-- 同时运行的线程数 -->
+                <property name="numHelperThreads" value="5"/>
+                <!--每5小时检查所有连接池中的空闲连接。防止mysql wait_timeout（默认8小时） -->
+                <property name="idleConnectionTestPeriod" value="18000"/>
+                <!--如果设为true那么在取得连接的同时将校验连接的有效性。Default: false -->
+                <property name="testConnectionOnCheckin" value="true" />
+           </dataSource>
+        </environment>
+    </environments>
+
+    <mappers>
+        <package name="pos.dongwang.mapper"/>
+        <!--<mapper resource="com/dw/queue/entity/mapper/Advertise.xml"/>
+        <mapper class="com.dw.queue.entity.mapper.ConfigMapper" />-->
+    </mappers>
+</configuration>

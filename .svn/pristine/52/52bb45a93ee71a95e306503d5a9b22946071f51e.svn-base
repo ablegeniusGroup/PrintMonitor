@@ -1,0 +1,300 @@
+package pos.dongwang.dao;
+
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.session.SqlSession;
+import pos.dongwang.dto.IsBilledDto;
+import pos.dongwang.dto.PosOrderDto;
+import pos.dongwang.enums.OrderType;
+import pos.dongwang.enums.PrintStateEnum;
+import pos.dongwang.mapper.PosOrderDtoMapper;
+import pos.dongwang.model.PosOrder;
+import pos.dongwang.mybatis.MyBatisSqlSessionFactory;
+import pos.dongwang.util.AppUtils;
+import pos.dongwang.util.JdbcUtils;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Created by wenjing on 2017/10/20.
+ */
+public  class PosOrderDao {
+
+
+    public  static  Map<Long,List<PosOrderDto>> otheridxs = new HashMap<>();
+    /**
+     * 查詢出目前未打印的明細菜品，并按照臺號分類
+     *
+     * @param print_info
+     * @return
+     */
+
+    private static PosOrderDao instance;
+
+    public static PosOrderDao getInstance() {
+        if (instance == null) {
+            instance = new PosOrderDao();
+        }
+        return instance;
+    }
+
+
+
+    public static synchronized Map<String, List<PosOrderDto>> getPosOrderList(List<String> print_info, String timeInterval) {
+      /*  String sql = "select\n" +
+                "  rd.bill_no,\n" +
+                "  rd.sub_no,\n" +
+                "  rd.type,\n" +
+                "  rd.table_no,\n" +
+                "  rd.goodsno,\n" +
+                "  rd.order_idx,\n" +
+                "  t.name1,\n" +
+                "  t.print_info,\n" +
+                "  rd.rt_op_date,\n" +
+                "  rd.rt_op_time,\n" +
+                "  rd.s_code,\n" +
+                "  rd.seal_count,\n" +
+                "  rd.amt,\n" +
+                "  rd.print_state,\n" +
+                "  tp.single_prt,\n" +
+                "  tk.name1 as t_kic_msg,\n" +
+                "  rb.pos_id,\n" +
+                "  tp.name1 as print_name,\n" +
+                "  rd.barcode,\n" +
+                "  sc.name1 as staff,\n" +
+                "  tb.zone,\n" +
+                "  rs.NAME1 as r_desc,\n" +
+                "  isnull(ts.name1,'')+ isnull(' '+rs.name1,'')+ isnull(' '+tk.name1,'') as print_msg,\n" +
+                "  bc.line as region_id,\n" +
+                "  isnull(rp.person_num, 0 ) person_num,\n" +
+                "  ts.name1 as att_name,\n" +
+                "   (case when DATEDIFF(second, rm.min_time, rd.rt_op_time) = 0 then '首單'\n" +
+                "   when DATEDIFF(second, rm.min_time, rd.rt_op_time) > "+timeInterval+" then '尾單'\n" +
+                "   else '加單' end) as order_type\n" +
+                "from rt_bill_detail rd left join t_goods t\n" +
+                "    on rd.goodsno = t.goodsno\n" +
+                "  left join t_printer tp on t.print_info = tp.ptn_code\n" +
+                "  left join t_kic_msg tk on tk.code = rd.t_kic_msg\n" +
+                "  left join rt_order_bill rb on rb.bill_no = rd.bill_no and rd.type = rb.bill_t\n" +
+                "  left join s_code sc on sc.code = rd.s_code\n" +
+                "  left join [TABLE] tb on tb.table_no = rd.table_no\n" +
+                "  left join r_desc rs on rs.CODE = rd.R_DESC\n" +
+                "  left join BARCODE bc on bc.BARCODE = rd.BARCODE\n" +
+                "  left join rt_order_ts ro on rd.order_idx = ro.order_idx\n" +
+                "  left join order_ts ts on ts.CODE = ro.tss_code and ts.a_group = rd.goodsno\n" +
+                "  left join (select rd.BILL_NO,sum(rd.SEAL_COUNT) as person_num from rt_bill_detail rd  LEFT JOIN  t_goods t\n" +
+                "on rd.goodsno = t.goodsno where t.CAT = '054' and rd.TYPE ='N' group by rd.BILL_NO) rp on rp.BILL_NO = rd.BILL_NO\n" +
+                "left join (select BILL_NO, MIN(RT_OP_TIME) as min_time from rt_bill_detail GROUP BY BILL_NO) rm on rm.BILL_NO = rd.BILL_NO\n" +
+                "where  rd.type = 'N'  and  (rd.print_state in('UNPRINT', 'CANCEL', 'CHANGE', 'MSG') or rd.print_state is null) and  t.print_info in (" + print_info + ")" +
+                "order by rd.rt_op_date,rd.order_idx";*/
+       try {
+           SqlSession sqlSession = MyBatisSqlSessionFactory.getSqlSessionFactory().openSession();
+           Map<String, Object> map = new HashMap<>();
+           map.put("timeInterval", timeInterval);
+           map.put("printers", print_info);
+           List<PosOrderDto> posOrder = sqlSession.getMapper(PosOrderDtoMapper.class).getPosOrderList(map);
+           sqlSession.close();
+           Map<String, List<PosOrderDto>> posOrderDtoMap = posOrder.stream()
+                   .collect(Collectors.groupingBy(PosOrderDto::getTable_no));
+           Map<String, List<PosOrderDto>> showPosOrderDtoMap = new HashMap<>();
+           Iterator<Map.Entry<String, List<PosOrderDto>>> it = posOrderDtoMap.entrySet().iterator();
+           while (it.hasNext()) {
+               Map.Entry<String, List<PosOrderDto>> entry = it.next();
+               System.out.println("key= " + entry.getKey() + " and value= " + entry.getValue());
+               List<PosOrderDto> posmaplist = entry.getValue();
+               Map<String, PosOrderDto> goodsMap = new HashMap<>();
+               List<PosOrderDto> posOrderDtoList = new ArrayList<>();
+               for (PosOrderDto posDetail : posmaplist) {
+                   if (goodsMap.containsKey(posDetail.getGoodsno()+posDetail.getAtt_name())) {
+                       PosOrderDto posOrderDto = goodsMap.get(posDetail.getGoodsno()+posDetail.getAtt_name());
+                       if (posOrderDto != null) {
+                           posOrderDto.setSeal_count(posDetail.getSeal_count() + posOrderDto.getSeal_count());
+                           //處理口味
+                           posOrderDto.setPrint_msg((AppUtils.isNotBlank(posDetail.getPrint_msg())? posDetail.getPrint_msg()+"\n": "") + (AppUtils.isNotBlank(posOrderDto.getPrint_msg())? posOrderDto.getPrint_msg(): ""));
+                           if (OrderType.FIRSTORDER.getValue().equals(posDetail.getOrder_type())) {
+                               posOrderDto.setOrder_type(OrderType.FIRSTORDER.getValue());
+                           } else if (OrderType.FIRSTORDER.getValue().equals(posDetail.getOrder_type())) {
+                               posOrderDto.setOrder_type(OrderType.TAILORDER.getValue());
+                           }
+                           if(otheridxs.containsKey(posOrderDto.getOrder_idx())){
+                               List<PosOrderDto> idexs =  otheridxs.get(posOrderDto.getOrder_idx());
+                               idexs.add(posDetail);
+                               otheridxs.put(posOrderDto.getOrder_idx(),idexs);
+                           }
+                           else{
+                               List<PosOrderDto> posOrderDtoArrayList = new ArrayList<>();
+                               posOrderDtoArrayList.add(posDetail);
+                               otheridxs.put(posOrderDto.getOrder_idx(),posOrderDtoArrayList);
+                           }
+                           goodsMap.put(posDetail.getGoodsno()+posDetail.getAtt_name(), posOrderDto);
+                       } else {
+                           goodsMap.put(posDetail.getGoodsno()+posDetail.getAtt_name(), posDetail);
+                       }
+                   } else {
+                       goodsMap.put(posDetail.getGoodsno()+posDetail.getAtt_name(), posDetail);
+                   }
+               }
+               //需要再排序一下
+               Map<String, PosOrderDto> finalMap = new LinkedHashMap<>();
+               goodsMap.entrySet().stream()
+                       .sorted(Map.Entry.<String, PosOrderDto>comparingByKey()
+                               .reversed()).forEachOrdered(e -> finalMap.put(e.getKey(), e.getValue()));
+               showPosOrderDtoMap.put(posmaplist.get(0).getTable_no(), new ArrayList<PosOrderDto>( finalMap.values()));
+           }
+           return  showPosOrderDtoMap;
+       }catch (Exception e){
+           System.out.println(e.getMessage());
+       }
+        return null;
+
+    }
+
+    public static synchronized   Map<String, List<PosOrderDto>> getPosOrderListInit(List<String> print_info, String timeInterval) {
+      /*  String sql = "select\n" +
+                "  rd.bill_no,\n" +
+                "  rd.sub_no,\n" +
+                "  rd.type,\n" +
+                "  rd.table_no,\n" +
+                "  rd.goodsno,\n" +
+                "  rd.order_idx,\n" +
+                "  t.name1,\n" +
+                "  t.print_info,\n" +
+                "  rd.rt_op_date,\n" +
+                "  rd.rt_op_time,\n" +
+                "  rd.s_code,\n" +
+                "  rd.seal_count,\n" +
+                "  rd.amt,\n" +
+                "  rd.print_state,\n" +
+                "  tp.single_prt,\n" +
+                "  tk.name1 as t_kic_msg,\n" +
+                "  rb.pos_id,\n" +
+                "  tp.name1 as print_name,\n" +
+                "  rd.barcode,\n" +
+                "  sc.name1 as staff,\n" +
+                "  tb.zone,\n" +
+                "  rs.NAME1 as r_desc,\n" +
+                "  isnull(ts.name1,'')+ isnull(' '+rs.name1,'')+ isnull(' '+tk.name1,'') as print_msg,\n" +
+                "  bc.line as region_id,\n" +
+                "  isnull(rp.person_num, 0 ) person_num,\n" +
+                "  ts.name1 as att_name,\n" +
+                "   (case when DATEDIFF(second, rm.min_time, rd.rt_op_time) = 0 then '首單'\n" +
+                "   when DATEDIFF(second, rm.min_time, rd.rt_op_time) > "+timeInterval+" then '尾單'\n" +
+                "   else '加單' end) as order_type\n" +
+                "from rt_bill_detail rd left join t_goods t\n" +
+                "    on rd.goodsno = t.goodsno\n" +
+                "  left join t_printer tp on t.print_info = tp.ptn_code\n" +
+                "  left join t_kic_msg tk on tk.code = rd.t_kic_msg\n" +
+                "  left join rt_order_bill rb on rb.bill_no = rd.bill_no and rd.type = rb.bill_t\n" +
+                "  left join s_code sc on sc.code = rd.s_code\n" +
+                "  left join [TABLE] tb on tb.table_no = rd.table_no\n" +
+                "  left join r_desc rs on rs.CODE = rd.R_DESC\n" +
+                "  left join BARCODE bc on bc.BARCODE = rd.BARCODE\n" +
+                "  left join rt_order_ts ro on rd.order_idx = ro.order_idx\n" +
+                "  left join order_ts ts on ts.code = ro.tss_code and ts.a_group = rd.goodsno\n" +
+                "  left join (select rd.BILL_NO,sum(rd.SEAL_COUNT) as person_num from rt_bill_detail rd  LEFT JOIN  t_goods t\n" +
+                "on rd.goodsno = t.goodsno where t.CAT = '054' and rd.TYPE ='N' group by rd.BILL_NO) rp on rp.BILL_NO = rd.BILL_NO\n" +
+                "left join (select BILL_NO, MIN(RT_OP_TIME) as min_time from rt_bill_detail GROUP BY BILL_NO) rm on rm.BILL_NO = rd.BILL_NO\n" +
+                "where  rd.type = 'N'  and  (rd.print_state in ('UNPRINT', 'PREPRINT' , 'CANCEL', 'CHANGE', 'MSG')  or rd.print_state is null) and  t.print_info in (" + print_info + ")" +
+                "order by rd.rt_op_date,rd.order_idx";
+        System.out.println(sql);*/
+      try {
+          SqlSession sqlSession = MyBatisSqlSessionFactory.getSqlSessionFactory().openSession();
+          Map<String, Object> map = new HashMap<>();
+          map.put("timeInterval", timeInterval);
+          map.put("printers", print_info);
+          List<PosOrderDto> posOrder = sqlSession.getMapper(PosOrderDtoMapper.class).getPosOrderListInit(map);
+          sqlSession.close();
+          Map<String, List<PosOrderDto>> posOrderDtoMap =  posOrder.stream()
+                  .collect(Collectors.groupingBy(PosOrderDto::getTable_no));
+          Map<String, List<PosOrderDto>> showPosOrderDtoMap = new HashMap<>();
+          Iterator<Map.Entry<String, List<PosOrderDto>>> it = posOrderDtoMap.entrySet().iterator();
+          while (it.hasNext()) {
+              Map.Entry<String, List<PosOrderDto>> entry = it.next();
+              System.out.println("key= " + entry.getKey() + " and value= " + entry.getValue());
+              List<PosOrderDto> posmaplist = entry.getValue();
+              Map<String, PosOrderDto> goodsMap = new HashMap<>();
+              List<PosOrderDto> posOrderDtoList = new ArrayList<>();
+              for (PosOrderDto posDetail : posmaplist) {
+                  if (goodsMap.containsKey(posDetail.getGoodsno() + posDetail.getAtt_name())) {
+                      PosOrderDto posOrderDto = goodsMap.get(posDetail.getGoodsno()+posDetail.getAtt_name());
+                      if (posOrderDto != null) {
+                          posOrderDto.setSeal_count(posDetail.getSeal_count() + posOrderDto.getSeal_count());
+                          //處理口味
+                         // posOrderDto.setPrint_msg((AppUtils.isNotBlank(posDetail.getPrint_msg())? posDetail.getPrint_msg()+"\n": "") + (AppUtils.isNotBlank(posOrderDto.getPrint_msg())? posOrderDto.getPrint_msg(): ""));
+                          if (OrderType.FIRSTORDER.getValue().equals(posDetail.getOrder_type())) {
+                              posOrderDto.setOrder_type(OrderType.FIRSTORDER.getValue());
+                          } else if (OrderType.FIRSTORDER.getValue().equals(posDetail.getOrder_type())) {
+                              posOrderDto.setOrder_type(OrderType.TAILORDER.getValue());
+                          }
+                          if(otheridxs.containsKey(posOrderDto.getOrder_idx())){
+                              List<PosOrderDto> idexs =  otheridxs.get(posOrderDto.getOrder_idx());
+                              idexs.add(posDetail);
+                              otheridxs.put(posOrderDto.getOrder_idx(),idexs);
+                          }
+                          else{
+                              List<PosOrderDto> posOrderDtoArrayList = new ArrayList<>();
+                              posOrderDtoArrayList.add(posDetail);
+                              otheridxs.put(posOrderDto.getOrder_idx(),posOrderDtoArrayList);
+                          }
+                          goodsMap.put(posDetail.getGoodsno()+posDetail.getAtt_name(), posOrderDto);
+                      } else {
+                          goodsMap.put(posDetail.getGoodsno()+posDetail.getAtt_name(), posDetail);
+                      }
+                  } else {
+                      goodsMap.put(posDetail.getGoodsno()+posDetail.getAtt_name(), posDetail);
+                  }
+              }
+              Map<String, PosOrderDto> finalMap = new LinkedHashMap<>();
+              goodsMap.entrySet().stream()
+                      .sorted(Map.Entry.<String, PosOrderDto>comparingByKey()
+                              .reversed()).forEachOrdered(e -> finalMap.put(e.getKey(), e.getValue()));
+              showPosOrderDtoMap.put(posmaplist.get(0).getTable_no(), new ArrayList<PosOrderDto>(finalMap.values()));
+          }
+          return showPosOrderDtoMap;
+      } catch (Exception e) {
+          e.printStackTrace();
+      }
+       return null;
+    }
+
+
+    public static void updataPrintState(SqlSession sqlSession,PrintStateEnum newPrintStatEnum, PrintStateEnum oldPrintStatEnum, String bill_no, long order_idx, String type) {
+            sqlSession.getMapper(PosOrderDtoMapper.class).updatePrintState(newPrintStatEnum.getValue(),oldPrintStatEnum.getValue(),bill_no,order_idx,type);
+            sqlSession.commit();
+    }
+
+    public static void updatePrintStateWithoutOldPrintState(SqlSession sqlSession,PrintStateEnum newPrintStatEnum, String bill_no, long order_idx, String type) {
+        sqlSession.getMapper(PosOrderDtoMapper.class).updatePrintStateWithoutOldPrintState(newPrintStatEnum.getValue(),bill_no,order_idx,type);
+        sqlSession.commit();
+    }
+
+    public static boolean pauseItem(PosOrder posOrder) {
+       /* String sql = "{call pro_stopmenu('" + posOrder.getBarcode() + "','" + posOrder.getStaff() + "','" + posOrder.getGoodsno() + "','IOUT','TRUE')}";*/
+        SqlSession sqlSession = MyBatisSqlSessionFactory.getSqlSessionFactory().openSession();
+       try {
+            sqlSession.getMapper(PosOrderDtoMapper.class).pauseItem(posOrder);
+            sqlSession.commit();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+           sqlSession.rollback();
+            return false;
+        }
+        finally{
+            sqlSession.close();
+        }
+       return true;
+    }
+
+    public static IsBilledDto isBilled(String bill_no, String type) {
+      /*  String sql = "select settled from rt_order_bill where bill_no ='" + bill_no + "' and bill_t = '" + type + "'";
+        System.out.println(sql);*/
+        SqlSession sqlSession = MyBatisSqlSessionFactory.getSqlSessionFactory().openSession();
+        IsBilledDto isBilledDto = sqlSession.getMapper(PosOrderDtoMapper.class).isBilled(bill_no,type);
+        sqlSession.close();
+        return  isBilledDto;
+
+    }
+}

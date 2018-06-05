@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration>
+<configuration>
+
+	<property name="LogDir" value="logs" />
+
+	<appender name="ConsoleAnsiColorAppender" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>
+				%d{HH:mm:ss.SSS} [%thread] [%highlight(%-5level)] %cyan(%logger{36}) %red(%file{0}):%green(%line) %magenta(%method{24}) - %X{mdc}%boldBlue(%msg) %n
+			</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>TRACE</level>
+		</filter>
+	</appender>
+
+	<appender name="ConsoleAppender" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>
+				%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} %file{0}:%line %method{24} - %X{mdc}%msg%n
+			</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>TRACE</level>
+		</filter>
+	</appender>
+
+	<appender name="DailyRollingFileAppender"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<File>${LogDir}/daily.log</File>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<FileNamePattern>${LogDir}/daily.%d{yyyy-MM-dd}.log</FileNamePattern>
+			<maxHistory>10</maxHistory>
+		</rollingPolicy>
+
+		<encoder>
+			<Pattern>
+				%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} %file{0}:%line %method{24} - %X{mdc}%msg%n
+			</Pattern>
+		</encoder>
+	</appender>
+
+	<root>
+		<level value="INFO" />
+		<appender-ref ref="ConsoleAnsiColorAppender" />
+		<appender-ref ref="DailyRollingFileAppender" />
+	</root>
+	<logger name="pos.dongwang" level="ERROR" />
+	<logger name="mapper" level="DEBUG">
+		<!--<appender-ref ref="ConsoleAnsiColorAppender" />-->
+	</logger>
+</configuration>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pos.dongwang.mapper.OrderHangListMapper">
+
+    <resultMap id="BaseResultMap" type="pos.dongwang.dto.OrderHangListDto">
+        <result column="REF_NUM" property="refNum"  />
+        <result column="HANG_TIME" property="hangTime" />
+        <result column="RELEASE_TIME" property="releaseTime" />
+    </resultMap>
+
+  <!--  <resultMap id="BaseResultDtoMap" type="pos.dongwang.dto.OrderHangDto">
+        <result column="REF_NUM" property="refNum"  />
+        <result column="HANG_TIME" property="hangTime" />
+        <result column="RELEASE_TIME" property="releaseTime" />
+    </resultMap>-->
+
+
+    <insert id="addOrderHangList">
+  insert into ORDER_HANG_LIST  values(#{refNum},#{hangTime},#{releaseTime})
+    </insert>
+
+ <select id="getOrderHangListCountByDate" resultType="java.lang.Long">
+     select count(*) from ORDER_HANG_LIST with(READPAST) where #{nowDate} between HANG_TIME and RELEASE_TIME
+ </select>
+
+    <delete id="deleteOrderHangListByRefNum">
+         delete from ORDER_HANG_LIST with(READPAST)  where REF_NUM = #{refNum}
+    </delete>
+
+  <!--  <select id="getOrderHangList" resultMap="">
+
+    </select>-->
+
+</mapper>

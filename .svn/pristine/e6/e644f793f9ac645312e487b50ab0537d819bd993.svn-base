@@ -1,0 +1,79 @@
+package com.dw.queue.jms;
+
+import javax.jms.*;
+
+import org.apache.activemq.ActiveMQConnectionFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class JmsProducerFactory {
+	Logger logger = LoggerFactory.getLogger(JmsProducerFactory.class);
+	private static JmsProducerFactory instance = getInstance();
+	private static Connection connection = null;
+	private static Session session = null;
+	/**
+	 * 私有化构造函数
+	 */
+	private JmsProducerFactory(){}
+
+	/**
+	 * 初始化连接
+	 * @param username
+	 * @param password
+	 * @param url
+	 */
+	public static void init(String username, String password, String url) {
+		try {
+			ConnectionFactory connectionFactory = new ActiveMQConnectionFactory(username, password, url);
+			connection = connectionFactory.createConnection();
+			// 创建session
+			// 第一个参数:是否支持事务，如果为true，则会忽略第二个参数，被jms服务器设置为SESSION_TRANSACTED，为false时，paramB的值可为AUTO_ACKNOWLEDGE，CLIENT_ACKNOWLEDGE，DUPS_OK_ACKNOWLEDGE其中一个。
+			// AUTO_ACKNOWLEDGE为自动确认，客户端发送和接收消息不需要做额外的工作。哪怕是接收端发生异常，也会被当作正常发送成功。
+			// CLIENT_ACKNOWLEDGE为客户端确认。客户端接收到消息后，必须调用javax.jms.Message的acknowledge方法。jms服务器才会当作发送成功，并删除消息。
+			// DUPS_OK_ACKNOWLEDGE允许副本的确认模式。一旦接收方应用程序的方法调用从处理消息处返回，会话对象就会确认消息的接收；而且允许重复确认。
+			session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 单例
+	 */
+	private static JmsProducerFactory getInstance() {
+		JmsProducerFactory factory = null;
+		synchronized (JmsProducerFactory.class) {
+			if (instance == null) {
+				factory = new JmsProducerFactory();
+			}
+		}
+		return factory;
+	}
+
+	/**
+	 * 发送消息
+	 * @param destination
+	 * @param msg
+	 */
+	public static void send(String destination, String msg) {
+		try {
+			Queue queue = session.createQueue(destination);
+			MessageProducer producer = session.createProducer(queue);
+			producer.setDeliveryMode(DeliveryMode.PERSISTENT);
+			producer.send(session.createTextMessage(msg));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 关闭连接，关闭session
+	 * @throws JMSException
+	 */
+	public static void close() throws JMSException {
+		if (session != null)
+			session.close();
+		if (connection != null)
+			connection.close();
+	}
+}

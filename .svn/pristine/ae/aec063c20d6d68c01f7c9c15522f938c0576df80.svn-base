@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pos.dongwang.mapper.PosOrderDtoMapper">
+
+    <resultMap id="BaseResultMap" type="pos.dongwang.dto.PosOrderDto">
+        <result column="bill_no" property="bill_no" />
+        <result column="sub_no" property="sub_no" />
+        <result column="type" property="type" />
+        <result column="table_no" property="table_no" />
+        <result column="goodsno" property="goodsno"/>
+        <result column="order_idx" property="order_idx" />
+        <result column="name1" property="name1" />
+        <result column="print_info" property="print_info"/>
+        <result column="rt_op_date" property="rt_op_date"/>
+        <result column="rt_op_time" property="rt_op_time"/>
+        <result column="s_code" property="s_code"/>
+        <result column="seal_count" property="seal_count"/>
+        <result column="amt" property="amt"/>
+        <result column="print_state" property="print_state"/>
+        <result column="single_prt" property="single_prt"/>
+        <result column="t_kic_msg" property="t_kic_msg"/>
+        <result column="pos_id" property="pos_id"/>
+        <result column="print_name" property="print_name"/>
+        <result column="barcode" property="barcode"/>
+        <result column="staff" property="staff"/>
+        <result column="zone" property="zone"/>
+        <result column="r_desc" property="r_desc"/>
+        <result column="print_msg" property="print_msg"/>
+        <result column="region_id" property="region_id"/>
+        <result column="person_num" property="person_num"/>
+        <result column="att_name" property="att_name"/>
+        <result column="order_type" property="order_type"/>
+        <result column="IN_DATE" property="in_date"></result>
+    </resultMap>
+
+    <resultMap id="BiillMap" type="pos.dongwang.dto.IsBilledDto">
+        <result column="settled" property="settled"></result>
+    </resultMap>
+
+     <select id="getPosOrderList" resultMap="BaseResultMap">
+
+      select   rd.bill_no,rd.sub_no,rd.type,rd.table_no,rd.goodsno,rd.order_idx,rb.IN_DATE,
+                t.name1,t.print_info,rd.rt_op_date,rd.rt_op_time,rd.s_code,rd.seal_count,rd.amt,rd.print_state,tp.single_prt,
+               tk.name1 as t_kic_msg,rb.pos_id, tp.name1 as print_name, rd.barcode,sc.name1 as staff, tb.zone,rs.NAME1 as r_desc,
+               isnull(ts.name1,'')+ isnull(' '+rs.name1,'')+ isnull(' '+tk.name1,'') as print_msg,
+              bc.line as region_id,
+              isnull(rp.person_num, 0 ) person_num,
+              ts.name1 as att_name,
+              (case when DATEDIFF(second, rm.min_time, rd.rt_op_time) = 0 then '首單'
+               when DATEDIFF(second, rm.min_time, rd.rt_op_time) > ${timeInterval} then '尾單'
+              else '加單' end) as order_type
+              from rt_bill_detail rd  with(READPAST) left join t_goods t
+                on rd.goodsno = t.goodsno
+                 left join t_printer tp on t.print_info = tp.ptn_code
+                 left join t_kic_msg tk on tk.code = rd.t_kic_msg
+                left join rt_order_bill rb on rb.bill_no = rd.bill_no and rd.type = rb.bill_t
+                left join s_code sc on sc.code = rd.s_code
+                left join [TABLE] tb on tb.table_no = rd.table_no
+                    left join r_desc rs on rs.CODE = rd.R_DESC
+                left join BARCODE bc on bc.BARCODE = rd.BARCODE
+                left join rt_order_ts ro on rd.order_idx = ro.order_idx
+                left join order_ts ts on ts.CODE = ro.tss_code and ts.a_group = rd.goodsno
+                left join (select rd.BILL_NO,sum(rd.SEAL_COUNT) as person_num from rt_bill_detail rd  LEFT JOIN  t_goods t
+                on rd.goodsno = t.goodsno where t.CAT = '054' and rd.TYPE ='N' group by rd.BILL_NO) rp on rp.BILL_NO = rd.BILL_NO
+                left join (select rd.BILL_NO, MIN(rd.RT_OP_TIME) as min_time from rt_bill_detail  rd  LEFT JOIN  t_goods t
+         on rd.goodsno = t.goodsno where t.CAT not in ('054','007') and rd.TYPE ='N'  GROUP BY rd.BILL_NO) rm on rm.BILL_NO = rd.BILL_NO
+                where  rd.type = 'N'  and  (rd.print_state in('UNPRINT', 'MSG','HANG') or rd.print_state is null) and  t.print_info in
+                <foreach collection="printers" item="p" open="(" separator="," close=")">
+                  ${p}
+               </foreach>
+               and  not exists (
+               select * from order_hang_list h where getdate() between h.HANG_TIME and h.RELEASE_TIME
+               and h.ref_num =rd.bill_no
+               )
+               order by  cast(isnull(t.IN_DECIMAL,'0') as int), rd.rt_op_date,rd.order_idx
+
+     </select>
+
+    <select id="getPosOrderListInit" resultMap="BaseResultMap" parameterType="java.util.Map">
+               select
+               rd.bill_no,
+               rd.sub_no,
+               rd.type,
+               rd.table_no,
+               rd.goodsno,
+               rd.order_idx,
+               t.name1,
+               t.print_info,
+               rd.rt_op_date,
+               rb.IN_DATE,
+               rd.rt_op_time,
+               rd.s_code,
+               rd.seal_count,
+               rd.amt,
+               rd.print_state,
+               tp.single_prt,
+               tk.name1 as t_kic_msg,
+               rb.pos_id,
+               tp.name1 as print_name,
+               rd.barcode,
+               sc.name1 as staff,
+               tb.zone,
+               rs.NAME1 as r_desc,
+               isnull(ts.name1,'')+ isnull(' '+rs.name1,'')+ isnull(' '+tk.name1,'') as print_msg,
+               bc.line as region_id,
+               isnull(rp.person_num, 0 ) person_num,
+               ts.name1 as att_name,
+               (case when DATEDIFF(second, rm.min_time, rd.rt_op_time) = 0 then '首單'
+               when DATEDIFF(second, rm.min_time, rd.rt_op_time) > ${timeInterval} then '尾單'
+               else '加單' end) as order_type
+                from rt_bill_detail rd  with(READPAST) left join t_goods t
+                on rd.goodsno = t.goodsno
+                left join t_printer tp on t.print_info = tp.ptn_code
+                left join t_kic_msg tk on tk.code = rd.t_kic_msg
+                left join rt_order_bill rb on rb.bill_no = rd.bill_no and rd.type = rb.bill_t
+                left join s_code sc on sc.code = rd.s_code
+                left join [TABLE] tb on tb.table_no = rd.table_no
+                left join r_desc rs on rs.CODE = rd.R_DESC
+                left join BARCODE bc on bc.BARCODE = rd.BARCODE
+                left join rt_order_ts ro on rd.order_idx = ro.order_idx
+                left join order_ts ts on ts.code = ro.tss_code and ts.a_group = rd.goodsno
+                left join (select rd.BILL_NO,sum(rd.SEAL_COUNT) as person_num from rt_bill_detail rd  LEFT JOIN  t_goods t
+                on rd.goodsno = t.goodsno where t.CAT = '054' and rd.TYPE ='N' group by rd.BILL_NO) rp on rp.BILL_NO = rd.BILL_NO
+                left join (select rd.BILL_NO, MIN(rd.RT_OP_TIME) as min_time from rt_bill_detail rd LEFT JOIN  t_goods t
+        on rd.goodsno = t.goodsno where t.CAT not in ('054','007') and rd.TYPE ='N'  GROUP BY rd.BILL_NO) rm on rm.BILL_NO = rd.BILL_NO
+                where  rd.type = 'N'  and  (rd.print_state in ('UNPRINT', 'PREPRINT' , 'MSG', 'HANG')  or rd.print_state is null) and  t.print_info in
+                <foreach collection="printers" item="p" open="(" separator="," close=")">
+                    ${p}
+                </foreach>
+                and  not exists (
+                select * from order_hang_list h where getdate() between h.HANG_TIME and h.RELEASE_TIME
+                and h.ref_num =rd.bill_no
+                )
+               order by cast(isnull(t.IN_DECIMAL,'0') as int), rd.rt_op_date,rd.order_idx
+    </select>
+
+
+    <select id="getHangPosOrderList" resultMap="BaseResultMap">
+
+        select   rd.bill_no,rd.sub_no,rd.type,rd.table_no,rd.goodsno,rd.order_idx,rb.IN_DATE,
+        t.name1,t.print_info,rd.rt_op_date,rd.rt_op_time,rd.s_code,rd.seal_count,rd.amt,rd.print_state,tp.single_prt,
+        tk.name1 as t_kic_msg,rb.pos_id, tp.name1 as print_name, rd.barcode,sc.name1 as staff, tb.zone,rs.NAME1 as r_desc,
+        isnull(ts.name1,'')+ isnull(' '+rs.name1,'')+ isnull(' '+tk.name1,'') as print_msg,
+        bc.line as region_id,
+        isnull(rp.person_num, 0 ) person_num,
+        ts.name1 as att_name,
+        (case when DATEDIFF(second, rm.min_time, rd.rt_op_time) = 0 then '首單'
+        when DATEDIFF(second, rm.min_time, rd.rt_op_time) > ${timeInterval} then '尾單'
+        else '加單' end) as order_type
+        from rt_bill_detail rd  with(READPAST) left join t_goods t
+        on rd.goodsno = t.goodsno
+        left join t_printer tp on t.print_info = tp.ptn_code
+        left join t_kic_msg tk on tk.code = rd.t_kic_msg
+        left join rt_order_bill rb on rb.bill_no = rd.bill_no and rd.type = rb.bill_t
+        left join s_code sc on sc.code = rd.s_code
+        left join [TABLE] tb on tb.table_no = rd.table_no
+        left join r_desc rs on rs.CODE = rd.R_DESC
+        left join BARCODE bc on bc.BARCODE = rd.BARCODE
+        left join rt_order_ts ro on rd.order_idx = ro.order_idx
+        left join order_ts ts on ts.CODE = ro.tss_code and ts.a_group = rd.goodsno
+        left join (select rd.BILL_NO,sum(rd.SEAL_COUNT) as person_num from rt_bill_detail rd  LEFT JOIN  t_goods t
+        on rd.goodsno = t.goodsno where t.CAT = '054' and rd.TYPE ='N' group by rd.BILL_NO) rp on rp.BILL_NO = rd.BILL_NO
+        left join (select BILL_NO, MIN(RT_OP_TIME) as min_time from rt_bill_detail GROUP BY BILL_NO) rm on rm.BILL_NO = rd.BILL_NO
+        where  rd.type = 'N'  and  rd.print_state in('HANG')  and  t.print_info in
+        <foreach collection="printers" item="p" open="(" separator="," close=")">
+            ${p}
+        </foreach>
+        and   exists (
+        select * from order_hang_list h where getdate() between h.HANG_TIME and h.RELEASE_TIME
+        and h.ref_num =rd.bill_no
+        )
+        order by rd.rt_op_date,rd.order_idx
+
+    </select>
+
+
+
+
+
+    <update id="updatePrintState">
+          update rt_bill_detail with(READPAST) set print_state= #{newPrintStatEnum} where bill_no = #{bill_no} and order_idx= #{order_idx}
+              and type = #{type} and ( print_state = #{oldPrintStatEnum} or print_state is null)
+    </update>
+
+    <update id="updatePrintStateWithoutOldPrintState">
+        update rt_bill_detail with(READPAST) set print_state= #{newPrintStatEnum} where bill_no = #{bill_no} and order_idx= #{order_idx}
+        and type = #{type}
+    </update>
+    
+    <update id="pauseItem">
+
+      {call pro_stopmenu(#{posOrder.barcode},#{posOrder.staff},#{posOrder.goodsno},'IOUT','TRUE')}
+
+   </update>
+
+    <select id="isBilled" resultMap="BiillMap">
+            select settled from rt_order_bill where bill_no = #{bill_no} and bill_t = #{type};
+    </select>
+
+    <select id="getOrderCountsByBillNo" resultType="java.lang.Long">
+        select count(distinct RT_OP_TIME)   from RT_BILL_DETAIL  with(READPAST) where BILL_NO = #{bill_no}
+    </select>
+
+
+</mapper>

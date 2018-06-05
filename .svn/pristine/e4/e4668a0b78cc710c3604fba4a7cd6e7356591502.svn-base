@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pos.dongwang.mapper.TGoodsDtoMapper">
+
+    <resultMap id="BaseResultMap" type="pos.dongwang.dto.TGoodsDto">
+        <result column="goodsNo" property="goodsNo" />
+        <result column="goodName1" property="goodName1" />
+    </resultMap>
+
+    <select id="getTGoodsDto" resultMap="BaseResultMap">
+      select  g.GoodsNo as goodsNo,g.NAME1 as goodName1  from PAGE_CONT as pc inner join PAGE as p on p.ID = pc.PAGE_INDEX inner join T_goods g on g.GoodsNo = pc.GoodsNo where p.TB_ID = #{tbId}
+    </select>
+
+
+   <select id="getOutOfStockTGoodsDto" resultMap="BaseResultMap">
+    select g.GoodsNo as goodsNo,g.NAME1 as goodName1 from T_goods g where g.GoodsNo in (SELECT su.GoodsNo
+         FROM SUSPENDI su where su.auto_pause = 'TRUE' ) or g.GoodsNo in (select k.GoodsNo from ITEM_STK k where k.STOCK = 0.00 )
+   </select>
+
+   <select id="existOutOfStockTGoodsDto" resultMap="BaseResultMap">
+   SELECT g.GoodsNo as goodsNo,g.NAME1 as goodName1
+         FROM SUSPENDI su inner join T_goods g on g.GoodsNo = su.GoodsNo  where su.auto_pause = 'TRUE' and g.GoodsNo = #{goodNo}
+   </select>
+
+    <insert id="insertOutOfStockTGoodsDto">
+  insert into SUSPENDI  values(#{goodNo},'TRUE',GETDATE())
+    </insert>
+
+    <update id="updateTGoodsPause">
+        update T_goods set pause = #{state} where GoodsNo= #{goodNo}
+    </update>
+
+    <update id="updateSUSPENDIPause">
+        update SUSPENDI  set auto_pause= #{state} where GoodsNo= #{goodNo}
+    </update>
+
+</mapper>

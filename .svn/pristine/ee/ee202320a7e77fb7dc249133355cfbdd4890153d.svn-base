@@ -1,0 +1,22 @@
+package pos.dongwang;
+
+
+import org.apache.ibatis.session.SqlSession;
+import pos.dongwang.mapper.BranchMapper;
+import pos.dongwang.mybatis.MyBatisSqlSessionFactory;
+
+import java.io.IOException;
+import java.util.List;
+
+public class TestMybatis {
+
+	public static void main(String[] args) throws IOException {
+		SqlSession session = MyBatisSqlSessionFactory.getSqlSessionFactory().openSession();
+		BranchMapper branchMapper = session.getMapper(BranchMapper.class);
+		String line = branchMapper.getLineByBarcode("125");
+		System.out.println(line);
+		session.close();
+		
+}
+
+}

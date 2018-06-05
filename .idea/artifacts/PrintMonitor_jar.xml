@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact name="PrintMonitor:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/PrintMonitor_jar</output-path>
+    <root id="root">
+      <element id="archive" name="PrintMonitor.jar">
+        <element id="module-output" name="PrintMonitor" />
+      </element>
+      <element id="library" level="project" name="lib" />
+    </root>
+  </artifact>
+</component>

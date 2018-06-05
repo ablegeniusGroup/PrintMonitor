@@ -1,0 +1,65 @@
+package com.dw.pos.message.entity;
+
+import com.baomidou.mybatisplus.annotations.TableField;
+import com.baomidou.mybatisplus.annotations.TableName;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.experimental.Accessors;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+
+@TableName("LOG")
+@Accessors(chain = true)
+@NoArgsConstructor
+@Getter
+@Setter
+@ToString
+public class RtLog implements Serializable{
+	@TableField("BARCODE")
+	private String barcode;
+	@TableField("RT_OP_DATE")
+	private String rtOpDate;
+	@TableField("RT_OP_TIME")
+	private String rtOpTime;
+	@TableField("S_CODE")
+	private String sCode;
+	@TableField("LOG_T")
+	private String logT;
+	@TableField("TYPE")
+	private String type;
+	@TableField("RT_T_IDX")
+	private String rtTIdx;
+	@TableField("BILL_NO")
+	private String billNO;
+	@TableField("SUB_NO")
+	private String subNo;
+	@TableField("TABLE1")
+	private String table1;
+	@TableField("TABLE2")
+	private String table2;
+	@TableField("SEAL_COUNT1")
+	private String sealCount1;
+	@TableField("SEAL_COUNT2")
+	private String sealCount2;
+	@TableField("SEAL_COUNT3")
+	private String sealCount3;
+	@TableField("AMT1")
+	private BigDecimal amt1;
+	@TableField("AMT2")
+	private BigDecimal amt2;
+	@TableField("AMT3")
+	private BigDecimal amt3;
+	@TableField("REMARK1")
+	private String remark1;
+	@TableField("REMARK2")
+	private String remark2;
+	@TableField("REMARK3")
+	private String remark3;
+	@TableField("REMARK4")
+	private String remark4;
+	@TableField("DAYEND_IDX")
+	private String dayendIdx;
+}

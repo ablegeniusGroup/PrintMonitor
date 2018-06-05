@@ -1,0 +1,1022 @@
+package pos.dongwang;
+
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.fxml.FXMLLoader;
+import javafx.geometry.*;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.stage.Modality;
+import javafx.stage.Screen;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.ibatis.session.SqlSession;
+import pos.dongwang.controller.FoodListController;
+import pos.dongwang.dao.PosOrderDao;
+import pos.dongwang.dao.TopButtonDao;
+import pos.dongwang.dto.PosOrderDto;
+import pos.dongwang.dto.RulerDto;
+import pos.dongwang.dto.TGoodsDto;
+import pos.dongwang.dto.TopButtonDto;
+import pos.dongwang.enums.OrderType;
+import pos.dongwang.enums.PrintStateEnum;
+import pos.dongwang.mapper.TGoodsDtoMapper;
+import pos.dongwang.model.TGoods;
+import pos.dongwang.model.TopButton;
+import pos.dongwang.mybatis.MyBatisSqlSessionFactory;
+import pos.dongwang.print.GetPrintOrReportStr;
+import pos.dongwang.print.PrintRxTxVirtaul;
+import pos.dongwang.print.RXTXInit;
+import pos.dongwang.properties.ReadProperties;
+import pos.dongwang.properties.SettingModel;
+import pos.dongwang.task.FindUnPrintListTask;
+import pos.dongwang.controller.OrderListController;
+import pos.dongwang.model.PosOrder;
+import pos.dongwang.task.PingTask;
+import pos.dongwang.util.*;
+
+import javax.print.attribute.standard.PrinterState;
+import java.io.*;
+import java.util.*;
+import java.util.Timer;
+
+public class Main extends Application {
+
+
+    private FlowPane flowPane = new FlowPane();
+
+    private Timer timerPrintData = new Timer();
+
+
+    //全部
+    private ObservableList<ObservableList<PosOrder>> orderBoxs = FXCollections.observableArrayList();
+
+    //首單
+    private ObservableList<ObservableList<PosOrder>> firstOrderBoxs = FXCollections.observableArrayList();
+
+    //加單
+    private ObservableList<ObservableList<PosOrder>> addOrderBoxs = FXCollections.observableArrayList();
+
+    //尾單
+    private ObservableList<ObservableList<PosOrder>> lastOrderBoxs = FXCollections.observableArrayList();
+
+    //選中的首單
+    private ObservableList<ObservableList<PosOrder>> selectedFirstOrderBoxs = FXCollections.observableArrayList();
+
+    //選中的加單
+    private ObservableList<ObservableList<PosOrder>> selectedAddOrderBoxs = FXCollections.observableArrayList();
+
+    //選中的尾單
+    private ObservableList<ObservableList<PosOrder>> selectedLastOrderBoxs = FXCollections.observableArrayList();
+
+    //選中的所有單
+    private ObservableList<ObservableList<PosOrder>> selectedOrderBoxs = FXCollections.observableArrayList();
+
+    //選中的掛起的單
+    private ObservableList<ObservableList<PosOrder>> selectedHangOrderBoxs = FXCollections.observableArrayList();
+
+    //選中的掛起的單
+    private ObservableList<ObservableList<PosOrder>> hangOrderBoxs = FXCollections.observableArrayList();
+
+    private ObservableList<TopButton> topButtons;
+
+    private StringProperty boxTotal = new SimpleStringProperty();
+
+    private StringProperty allBoxTotal = new SimpleStringProperty();
+
+    private StringProperty firstBoxTotal = new SimpleStringProperty();
+
+    private StringProperty addBoxTotal = new SimpleStringProperty();
+
+    private StringProperty lastBoxTotal = new SimpleStringProperty();
+
+    private StringProperty hangBoxTotal = new SimpleStringProperty();
+
+    private StringProperty  selectedOrderType = new SimpleStringProperty();
+
+    private Integer showcount;
+
+    private StringProperty autoPrintProp = new SimpleStringProperty();
+
+    private StringProperty isAutoPrint = new SimpleStringProperty();
+
+    private  ObservableList<Button> buttonList = FXCollections.observableArrayList();
+
+    private Stage foodStage;
+
+    private StringProperty orderType = new SimpleStringProperty(OrderType.ALLORDER.getValue());
+
+    private IntegerProperty orderHangCount = new SimpleIntegerProperty();
+
+    //出單規則：尾尾首加
+    private RulerDto rulerDto = new RulerDto();
+
+    private Circle circle = new Circle();
+
+    static {
+        RXTXInit.loadLib();
+    }
+
+
+    public Main() {
+        autoPrintProp.set("自動列印:" + ReadProperties.readStringByKey("autoPrint"));
+        boxTotal.set(orderBoxs.size() + selectedOrderBoxs.size() + "個任務需要列印，請盡快處理");
+
+    }
+
+    @Override
+    public void stop() throws Exception {
+        super.stop();
+        System.out.println("已經停止------------------------");
+        System.exit(0);
+    }
+
+
+
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        showcount =  Integer.parseInt(ReadProperties.readStringByKey("showCount"));
+        BorderPane root = new BorderPane();
+        root.getStylesheets().add(Main.class.getResource("controller/view/DarkTheme.css").toExternalForm());
+        Rectangle2D primaryScreenBounds = Screen.getPrimary().getBounds();
+        isAutoPrint =  new SimpleStringProperty(ReadProperties.readStringByKey("autoPrint")) ;
+        autoPrintProp.set("自動列印:" + ReadProperties.readStringByKey("autoPrint"));
+        selectedOrderType.set(OrderType.ALLORDER.getValue());
+        selectedOrderBoxs.addListener(new ListChangeListener<ObservableList<PosOrder>>() {
+            @Override
+            public void onChanged(Change<? extends ObservableList<PosOrder>> c) {
+               if(getOrderType().equals(OrderType.ALLORDER.getValue())){
+                   if (c.next()) {
+                       if (c.getAddedSize() > 0) {
+
+                           //監聽列表新增，如果有新增則更新模型
+                           setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), c.getAddedSubList().get(0),primaryStage);
+
+                       } else if (c.getRemovedSize() > 0) {
+                           System.out.println("刪除");
+                       }
+                   }
+                   Platform.runLater(() ->
+                   allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")"));
+                   Platform.runLater(() ->
+                   firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")"));
+                   Platform.runLater(() -> addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")"));
+                   Platform.runLater(() ->lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")"));
+               }
+            }
+        });
+        selectedFirstOrderBoxs.addListener(new ListChangeListener<ObservableList<PosOrder>>() {
+            @Override
+            public void onChanged(Change<? extends ObservableList<PosOrder>> c) {
+                if(getOrderType().equals(OrderType.FIRSTORDER.getValue())){
+                    if (c.next()) {
+                        if (c.getAddedSize() > 0) {
+                            //監聽列表新增，如果有新增則更新模型
+                            setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), c.getAddedSubList().get(0), primaryStage);
+
+                        } else if (c.getRemovedSize() > 0) {
+                            System.out.println("刪除");
+                        }
+                       // Platform.runLater(() ->boxTotal.set(selectedFirstOrderBoxs.size() + firstOrderBoxs.size() + "個任務需要列印，請盡快處理"));
+                        Platform.runLater(() ->
+                                allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")"));
+                        Platform.runLater(() ->
+                                firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")"));
+                        Platform.runLater(() -> addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")"));
+                        Platform.runLater(() ->lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")"));
+                    }
+                }
+            }
+        });
+        selectedAddOrderBoxs.addListener(new ListChangeListener<ObservableList<PosOrder>>() {
+            @Override
+            public void onChanged(Change<? extends ObservableList<PosOrder>> c) {
+                if(getOrderType().equals(OrderType.ADDORDER.getValue())){
+                    if (c.next()) {
+                        if (c.getAddedSize() > 0) {
+                            //監聽列表新增，如果有新增則更新模型
+                            setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), c.getAddedSubList().get(0),primaryStage);
+
+                        } else if (c.getRemovedSize() > 0) {
+                            System.out.println("刪除");
+                        }
+                       // Platform.runLater(() ->boxTotal.set(selectedAddOrderBoxs.size() + addOrderBoxs.size() + "個任務需要列印，請盡快處理"));
+                        Platform.runLater(() ->
+                                allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")"));
+                        Platform.runLater(() ->
+                                firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")"));
+                        Platform.runLater(() -> addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")"));
+                        Platform.runLater(() ->lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")"));
+                    }
+                }
+            }
+        });
+        selectedLastOrderBoxs.addListener(new ListChangeListener<ObservableList<PosOrder>>() {
+            @Override
+            public void onChanged(Change<? extends ObservableList<PosOrder>> c) {
+                if(getOrderType().equals(OrderType.TAILORDER.getValue())){
+                    if (c.next()) {
+                        if (c.getAddedSize() > 0) {
+                            //監聽列表新增，如果有新增則更新模型
+                            setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), c.getAddedSubList().get(0),primaryStage);
+                        } else if (c.getRemovedSize() > 0) {
+                            System.out.println("刪除");
+                        }
+                       // Platform.runLater(() ->boxTotal.set(selectedLastOrderBoxs.size() + lastOrderBoxs.size() + "個任務需要列印，請盡快處理"));
+                        Platform.runLater(() ->
+                                allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")"));
+                        Platform.runLater(() ->
+                                firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")"));
+                        Platform.runLater(() -> addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")"));
+                        Platform.runLater(() ->lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")"));
+                    }
+                }
+            }
+        });
+        orderBoxs.addListener(new ListChangeListener<ObservableList<PosOrder>>() {
+            @Override
+            public void onChanged(Change<? extends ObservableList<PosOrder>> c) {
+                if (c.next()) {
+                    if (c.getAddedSize() > 0) {
+                        System.out.println("添加");
+                            //ObservableList<ObservableList<PosOrder>> posOrderMap = main.getOrderBoxs();
+                        Platform.runLater(() ->
+                                allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")"));
+                        Platform.runLater(() ->
+                                firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")"));
+                        Platform.runLater(() -> addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")"));
+                        Platform.runLater(() ->lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")"));
+                    } else if (c.getRemovedSize() > 0) {
+                        System.out.println("刪除");
+                    }
+                }
+            }
+        });
+        addOrderBoxs.addListener(new ListChangeListener<ObservableList<PosOrder>>() {
+            @Override
+            public void onChanged(Change<? extends ObservableList<PosOrder>> c) {
+                if (c.next()) {
+                    if (c.getAddedSize() > 0) {
+                        System.out.println("添加");
+                        Platform.runLater(() ->
+                                allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")"));
+                        Platform.runLater(() ->
+                                firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")"));
+                        Platform.runLater(() -> addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")"));
+                        Platform.runLater(() ->lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")"));
+                    } else if (c.getRemovedSize() > 0) {
+                        System.out.println("刪除");
+                    }
+                }
+            }
+        });
+        firstOrderBoxs.addListener(new ListChangeListener<ObservableList<PosOrder>>() {
+            @Override
+            public void onChanged(Change<? extends ObservableList<PosOrder>> c) {
+                if (c.next()) {
+                    if (c.getAddedSize() > 0) {
+                        System.out.println("添加");
+                        Platform.runLater(() ->
+                                allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")"));
+                        Platform.runLater(() ->
+                                firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")"));
+                        Platform.runLater(() -> addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")"));
+                        Platform.runLater(() ->lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")"));
+                    } else if (c.getRemovedSize() > 0) {
+                        System.out.println("刪除");
+                    }
+                }
+            }
+        });
+        lastOrderBoxs.addListener(new ListChangeListener<ObservableList<PosOrder>>() {
+            @Override
+            public void onChanged(Change<? extends ObservableList<PosOrder>> c) {
+                if (c.next()) {
+                    if (c.getAddedSize() > 0) {
+                        System.out.println("添加");
+                        Platform.runLater(() ->
+                                allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")"));
+                        Platform.runLater(() ->
+                                firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")"));
+                        Platform.runLater(() -> addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")"));
+                        Platform.runLater(() ->lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")"));
+                    } else if (c.getRemovedSize() > 0) {
+                        System.out.println("刪除");
+                    }
+                }
+            }
+        });
+
+
+
+        topComponent(root,primaryScreenBounds,primaryStage);
+        bottomComponent(root, primaryScreenBounds,primaryStage);
+        centerComponnet(root, primaryScreenBounds,primaryStage);
+
+        primaryStage.setX(primaryScreenBounds.getMinX());
+        primaryStage.setY(primaryScreenBounds.getMinY());
+        primaryStage.setWidth(primaryScreenBounds.getWidth());
+        primaryStage.setHeight(primaryScreenBounds.getHeight());
+
+        // primaryStage.initStyle(StageStyle.TRANSPARENT);
+        primaryStage.setScene(new Scene(root));
+        primaryStage.setFullScreen(true);
+        primaryStage.show();
+
+        getPrintDataTask();
+
+
+    }
+
+    public void centerComponnet(BorderPane root, Rectangle2D primaryScreenBounds,Stage primaryStage) {
+
+        //設置中間下單信息
+        ScrollPane pane = new ScrollPane();
+        pane.setPrefSize(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight()/10*8);
+        pane.setHvalue(primaryScreenBounds.getHeight()/10*8 );
+        flowPane.setPrefWidth(primaryScreenBounds.getWidth());
+        flowPane.setPrefHeight(primaryScreenBounds.getHeight()/10*8 );
+        flowPane.setHgap(3);
+        flowPane.setVgap(2);
+        flowPane.setPadding(new Insets(0, 0, 0, 3));
+        pane.setContent(flowPane);
+        pane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        pane.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+      //  pane.setDisable(true);
+        root.setCenter(pane);
+        selectedOrderBoxs.forEach(posOrders -> {
+            setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight()/10*8, posOrders, primaryStage);
+        });
+
+
+
+    }
+
+
+    public void setupVbox(Double parentsWidth, Double parentsHeight, ObservableList<PosOrder> posOrders,Stage primaryStage) {
+        try {
+
+            Double paneWidth = parentsWidth / 3 - 5;
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(Main.class.getResource("controller/view/OrderListView.fxml"));
+            final VBox posOrderBox = loader.load();
+            posOrderBox.setPrefSize(paneWidth, parentsHeight);
+            OrderListController orderListController = loader.getController();
+            orderListController.setMain(this, posOrders, posOrderBox, primaryStage);
+            posOrderBox.setStyle("-fx-border-width: 10px;");
+            if(AppUtils.isNotBlank(posOrders) && posOrders.size() >=showcount){
+                posOrderBox.setStyle("-fx-border-width: 10px;-fx-border-color:red");
+            }
+            HBox hBox = (HBox) posOrderBox.getChildren().get(0);
+            hBox.setPrefHeight(parentsHeight/10*1);
+            hBox.setPrefWidth(paneWidth);
+            Label orderTypeLabel = (Label) hBox.getChildren().get(0);
+            orderTypeLabel.setPrefWidth(paneWidth/3);
+            orderTypeLabel.setPrefHeight(parentsHeight/10*1);
+            Label tableNumLabel = (Label) hBox.getChildren().get(1);
+            tableNumLabel.setPrefWidth(paneWidth/3*2);
+            tableNumLabel.setPrefHeight(parentsHeight/10*1);
+            HBox buttonBox = (HBox) posOrderBox.getChildren().get(1);
+            buttonBox.setPrefHeight(parentsHeight/10*1);
+            buttonBox.setPrefWidth(paneWidth);
+            Label orderCountLabel = (Label) buttonBox.getChildren().get(0);
+            orderCountLabel.setPrefWidth(paneWidth/2);
+            orderCountLabel.setPrefHeight(parentsHeight/10*1);
+            FlowPane buttonFlowPane = (FlowPane) buttonBox.getChildren().get(1);
+            buttonFlowPane.setPrefHeight(parentsHeight/10*1);
+            buttonFlowPane.setPrefWidth(paneWidth/2);
+            buttonFlowPane.setHgap(10);
+            Button printButton = (Button)  buttonFlowPane.getChildren().get(1);
+            printButton.setPrefWidth(paneWidth/4-10);
+            printButton.setPrefHeight(parentsHeight/10*1);
+            if(PrintStateEnum.HANG.getValue().equals(posOrders.get(0).getPrint_state())){
+                 buttonFlowPane.getChildren().remove(0);
+            }
+            else{
+                Button hangButton = (Button) buttonFlowPane.getChildren().get(0);
+                hangButton.setPrefWidth(paneWidth/4-10);
+                hangButton.setPrefHeight(parentsHeight/10*1);
+            }
+            if(!selectedOrderType.getValue().equals(OrderType.HANG.getValue())){
+                Platform.runLater(() ->  flowPane.getChildren().add(posOrderBox));
+            }
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setupHangVbox(Double parentsWidth, Double parentsHeight, ObservableList<PosOrder> posOrders,Stage primaryStage) {
+        try {
+
+            Double paneWidth = parentsWidth / 3 - 5;
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(Main.class.getResource("controller/view/OrderListView.fxml"));
+            final VBox posOrderBox = loader.load();
+            posOrderBox.setPrefSize(paneWidth, parentsHeight);
+            OrderListController orderListController = loader.getController();
+            orderListController.setMain(this, posOrders, posOrderBox, primaryStage);
+            posOrderBox.setStyle("-fx-border-width: 10px;");
+            if(AppUtils.isNotBlank(posOrders) && posOrders.size() >=showcount){
+                posOrderBox.setStyle("-fx-border-width: 10px;-fx-border-color:red");
+            }
+            HBox hBox = (HBox) posOrderBox.getChildren().get(0);
+            hBox.setPrefHeight(parentsHeight/10*1);
+            hBox.setPrefWidth(paneWidth);
+            Label orderTypeLabel = (Label) hBox.getChildren().get(0);
+            orderTypeLabel.setPrefWidth(paneWidth/3);
+            orderTypeLabel.setPrefHeight(parentsHeight/10*1);
+            Label tableNumLabel = (Label) hBox.getChildren().get(1);
+            tableNumLabel.setPrefWidth(paneWidth/3*2);
+            tableNumLabel.setPrefHeight(parentsHeight/10*1);
+            HBox buttonBox = (HBox) posOrderBox.getChildren().get(1);
+            buttonBox.setPrefHeight(parentsHeight/10*1);
+            buttonBox.setPrefWidth(paneWidth);
+            Label orderCountLabel = (Label) buttonBox.getChildren().get(0);
+            orderCountLabel.setPrefWidth(paneWidth/2);
+            orderCountLabel.setPrefHeight(parentsHeight/10*1);
+            FlowPane buttonFlowPane = (FlowPane) buttonBox.getChildren().get(1);
+            buttonFlowPane.setPrefHeight(parentsHeight/10*1);
+            buttonFlowPane.setPrefWidth(paneWidth/2);
+            buttonFlowPane.setHgap(10);
+            Button printButton = (Button)  buttonFlowPane.getChildren().get(1);
+            printButton.setPrefWidth(paneWidth/4-10);
+            printButton.setPrefHeight(parentsHeight/10*1);
+            if(PrintStateEnum.HANG.getValue().equals(posOrders.get(0).getPrint_state())){
+                buttonFlowPane.getChildren().remove(0);
+            }
+            else{
+                Button hangButton = (Button) buttonFlowPane.getChildren().get(0);
+                hangButton.setPrefWidth(paneWidth/4-10);
+                hangButton.setPrefHeight(parentsHeight/10*1);
+            }
+                Platform.runLater(() ->  flowPane.getChildren().add(posOrderBox));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public void topComponent(BorderPane root,Rectangle2D primaryScreenBounds,Stage primaryStage) {
+        //設置頂部信息欄
+        HBox topPane = new HBox();
+        topPane.setPrefWidth(primaryScreenBounds.getWidth());
+        topPane.setPrefHeight(primaryScreenBounds.getHeight()/10);
+        topPane.setStyle("-fx-background-color: #1d1d1d;-fx-border-width: 0 0 2 0; -fx-border-color:transparent transparent derive(-fx-base, 80%) transparent;");
+        topPane.setAlignment(Pos.CENTER);
+        Button allButton = new Button();
+        allBoxTotal.set("全部("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")");
+        allButton.setStyle("-fx-font-size: 25pt; -fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: #fcc101; -fx-alignment:center;-fx-border-width: 8 8 8 8; -fx-border-color:#fcc101  ");
+        allButton.setPrefWidth(topPane.getPrefWidth()/6+100);
+        allButton.setPrefHeight(topPane.getPrefHeight()-100);
+        allButton.setId("allButton");
+        allButton.textProperty().bind(allBoxTotal);
+        allButton.setOnAction(event->{
+            selectedOrderType.set(OrderType.ALLORDER.getValue());
+            //boxTotal.set(selectedOrderBoxs.size() +orderBoxs.size() + "個任務需要列印，請盡快處理");
+            allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")");
+            flowPane.getChildren().remove(0,flowPane.getChildren().size());
+            orderType.setValue(OrderType.ALLORDER.getValue());
+            allButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill:  #fcc101; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color: #fcc101 ");
+            ObservableList<Node> nodes = topPane.getChildren();
+            for(int i = 0;i<nodes.size();i++){
+                if(i!=0){
+                    nodes.get(i).setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color:#1d1d1d;-fx-text-fill: white; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color: white");
+                }
+            }
+            selectedOrderBoxs.forEach(posOrders -> {
+                setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), posOrders,primaryStage);
+            });
+        });
+        topPane.getChildren().add(allButton);
+        Button firstButton = new Button();
+        firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")");
+        firstButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment: center;-fx-border-width: 8 8 8 8;");
+        firstButton.setPrefWidth(topPane.getPrefWidth()/6+100);
+        firstButton.setPrefHeight(topPane.getPrefHeight()-100);
+        firstButton.textProperty().bind(firstBoxTotal);
+        firstButton.setOnAction(event->{
+            selectedOrderType.set(OrderType.FIRSTORDER.getValue());
+           // boxTotal.set(selectedFirstOrderBoxs.size() +firstOrderBoxs.size() + "個任務需要列印，請盡快處理");
+            firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")");
+            orderType.setValue(OrderType.FIRSTORDER.getValue());
+            flowPane.getChildren().remove(0,flowPane.getChildren().size());
+            firstButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: #fcc101; -fx-alignment: center;-fx-border-width: 8 8 8 8;-fx-border-color: #fcc101");
+            ObservableList<Node> nodes = topPane.getChildren();
+            for(int i = 0;i<nodes.size();i++){
+                if(i!=1){
+                    nodes.get(i).setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill:white; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color: white");
+                }
+            }
+            selectedFirstOrderBoxs.forEach(posOrders -> {
+                setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), posOrders, primaryStage);
+            });
+        });
+        topPane.getChildren().add(firstButton);
+        Button addButton = new Button();
+        addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")");
+        addButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment: center;-fx-border-width: 8 8 8 8;");
+        addButton.setPrefWidth(topPane.getPrefWidth()/6+100);
+        addButton.setPrefHeight(topPane.getPrefHeight()-100);
+        addButton.textProperty().bind(addBoxTotal);
+        addButton.setOnAction(event->{
+            selectedOrderType.set(OrderType.ADDORDER.getValue());
+           // boxTotal.set(selectedAddOrderBoxs.size() +addOrderBoxs.size() + "個任務需要列印，請盡快處理");
+            addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")");
+            orderType.setValue(OrderType.ADDORDER.getValue());
+            flowPane.getChildren().remove(0,flowPane.getChildren().size());
+            addButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: #fcc101; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color: #fcc101 ");
+            ObservableList<Node> nodes = topPane.getChildren();
+            for(int i = 0;i<nodes.size();i++){
+                if(i!=2){
+                    nodes.get(i).setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color:white");
+                }
+            }
+            selectedAddOrderBoxs.forEach(posOrders -> {
+                setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), posOrders,primaryStage);
+            });
+        });
+        topPane.getChildren().add(addButton);
+        Button lastButton = new Button();
+        lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")");
+        lastButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment: center;-fx-border-width: 8 8 8 8;");
+        lastButton.setPrefWidth(topPane.getPrefWidth()/6+100);
+        lastButton.setPrefHeight(topPane.getPrefHeight()-100);
+        lastButton.textProperty().bind(lastBoxTotal);
+        lastButton.setOnAction(event->{
+            selectedOrderType.set(OrderType.TAILORDER.getValue());
+           // boxTotal.set(selectedLastOrderBoxs.size() +lastOrderBoxs.size() + "個任務需要列印，請盡快處理");
+            lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")");
+            selectedOrderType.setValue(OrderType.TAILORDER.getValue());
+            flowPane.getChildren().remove(0,flowPane.getChildren().size());
+            lastButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill:  #fcc101; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color: #fcc101 ");
+            ObservableList<Node> nodes = topPane.getChildren();
+            for(int i = 0;i<nodes.size();i++){
+                if(i!=3){
+                    nodes.get(i).setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color: white");
+                }
+            }
+            selectedLastOrderBoxs.forEach(posOrders -> {
+                setupVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), posOrders,primaryStage);
+            });
+        });
+        topPane.getChildren().add(lastButton);
+        Button hangButton = new Button();
+        hangBoxTotal.set("掛起("+(hangOrderBoxs.size())+")");
+        hangButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment: center;-fx-border-width: 8 8 8 8;");
+        hangButton.setPrefWidth(topPane.getPrefWidth()/6+100);
+        hangButton.setPrefHeight(topPane.getPrefHeight()-100);
+        hangButton.textProperty().bind(hangBoxTotal);
+        hangButton.setOnAction(event->{
+            selectedOrderType.setValue(OrderType.HANG.getValue());
+            flowPane.getChildren().remove(0,flowPane.getChildren().size());
+            hangButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill:  #fcc101; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color: #fcc101 ");
+            ObservableList<Node> nodes = topPane.getChildren();
+            for(int i = 0;i<nodes.size();i++){
+                if(i!=4){
+                    nodes.get(i).setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment:center;-fx-border-width: 8 8 8 8;-fx-border-color: white");
+                }
+            }
+            hangOrderBoxs.forEach(posOrders -> {
+                setupHangVbox(primaryScreenBounds.getWidth(), primaryScreenBounds.getHeight(), posOrders,primaryStage);
+            });
+        });
+        topPane.getChildren().add(hangButton);
+        circle.setRadius(20.0f);
+        circle.setId("state");
+        circle.setFill(Color.GREEN);
+        topPane.getChildren().add(circle);
+        root.setTop(topPane);
+    }
+
+    public void bottomComponent(BorderPane root, Rectangle2D primaryScreenBounds,Stage primaryStage) {
+        //設置底部功能按鈕欄
+        Double paneWidth = primaryScreenBounds.getWidth()/3 ;
+        HBox bottomPane = new HBox();
+        bottomPane.setAlignment(Pos.CENTER);
+        bottomPane.setPrefSize(paneWidth,primaryScreenBounds.getHeight()/10);
+        Button autoPrint = new Button();
+        autoPrint.textProperty().bind(autoPrintProp);
+        autoPrint.setOnAction(e -> {
+            String isAuto = autoPrintProp.getValue().indexOf("OFF") != -1 ? "ON" : "OFF";
+            autoPrintProp.set("自動列印:" + isAuto);
+            ReadProperties.setProperties(new SettingModel("autoPrint", isAuto, "自動列印"));
+            isAutoPrint =  new SimpleStringProperty(isAuto);
+        });
+        autoPrint.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment: center;-fx-border-width: 8 8 8 8;-fx-border-color: white");
+        autoPrint.setPrefSize(paneWidth, primaryScreenBounds.getHeight()/10);
+        bottomPane.getChildren().add(autoPrint);
+
+        Button print = new Button("沽清");
+        print.setPrefSize(paneWidth, primaryScreenBounds.getHeight()/10);
+        print.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment: center;-fx-border-width: 8 8 8 8;-fx-border-color: white");
+        print.setOnAction(e -> {
+            FXMLLoader loader = null;
+            HBox hbox = null;
+            Stage dialogStage = null;
+            FoodListController controller = null;
+            Scene scene = null;
+            try {
+                loader = new FXMLLoader();
+                loader.setLocation(Main.class.getResource("controller/view/FoodListView.fxml"));
+                hbox =  loader.load();
+                controller = loader.getController();
+                List<TopButtonDto> topButtonDtos =  TopButtonDao.getTopButtons();
+                topButtons = FXCollections.observableArrayList();
+                for(TopButtonDto topButtonDto : topButtonDtos){
+                     topButtons.add(new TopButton(topButtonDto.getID(),topButtonDto.getNAME1(),topButtonDto.getNAME2()));
+                }
+                hbox.setPrefHeight(primaryScreenBounds.getHeight()*0.8);
+                hbox.setPrefWidth(primaryScreenBounds.getWidth()*0.8);
+                hbox.setStyle("-fx-background-color: #1d1d1d; -fx-border-width: 1px; -fx-border-color: wheat");
+                /*vBox.setPrefWidth(100);
+                vBox.setPrefHeight(200);*/
+                dialogStage = new Stage();
+                dialogStage.setResizable(false);
+                dialogStage.setMinWidth(800);
+                dialogStage.setMaxHeight(700);
+                dialogStage.initModality(Modality.APPLICATION_MODAL);
+                dialogStage.initStyle(StageStyle.TRANSPARENT);
+                dialogStage.initOwner(primaryStage);
+                scene = new Scene(hbox);
+                dialogStage.setScene(scene);
+                controller.setMain(this,this.topButtons,hbox,dialogStage,scene);
+                dialogStage.showAndWait();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        });
+        bottomPane.getChildren().add(print);
+        Button closeButton = new Button("關閉");
+        closeButton.setPrefSize(paneWidth, primaryScreenBounds.getHeight()/10);
+        closeButton.setStyle("-fx-font-size: 25pt;-fx-font-weight:bolder;-fx-background-color: #1d1d1d;-fx-text-fill: white; -fx-alignment: center;-fx-border-width: 8 8 8 8;-fx-border-color: white");
+        closeButton.setOnAction(e -> {
+            primaryStage.close();
+        });
+        bottomPane.getChildren().add(closeButton);
+       /* Button his = new Button("歷史");
+        his.setPrefSize(paneWidth, 60);
+        his.setStyle("-fx-font-size: 16pt");
+        bottomPane.getChildren().add(his);*/
+        root.setBottom(bottomPane);
+    }
+
+
+
+    public  void removePosOrderData(boolean flag,ObservableList<PosOrder> posOrderData, VBox posOrderBox,TableView<PosOrder> posOrderTab) {
+        SqlSession sqlSession = SqlSessionUtil.getSqlSession();
+        try {
+            //orderBoxs.remove(posOrderData);
+            //如果true整个posOrderBox去掉
+            if(flag){
+                int i = selectedOrderBoxs.indexOf(posOrderData);
+                int index = orderBoxs.indexOf(posOrderData);
+                try {
+                    if(index >= 0 || i>=0){
+                        List<NameValuePair> nvps = new ArrayList<NameValuePair>();
+                        nvps.add(new BasicNameValuePair("refNum",posOrderData.get(0).getIn_date() + posOrderData.get(0).getBill_no()));
+                        nvps.add(new BasicNameValuePair("subRef",posOrderData.get(0).getSub_no()));
+                        nvps.add(new BasicNameValuePair("companyId",ReadProperties.readStringByKey("companyId")));
+                        nvps.add(new BasicNameValuePair("outline",ReadProperties.readStringByKey("outline")));
+                        nvps.add(new BasicNameValuePair("outlet",ReadProperties.readStringByKey("outlet")));
+                        nvps.add(new BasicNameValuePair("tableNum",posOrderData.get(0).getTable_no()));
+                        nvps.add(new BasicNameValuePair("printState",PrintStateEnum.PRINTED.getValue()));
+                        SendUtils.sendRequest(ReadProperties.readStringByKey("printStateUrl"),nvps);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return;
+                }
+                if(i>=0){
+                    selectedOrderBoxs.remove(i);
+                }
+                if(index >=0){
+                    orderBoxs.remove(i);
+                }
+                if(i>=0 || index>=0){
+                    flowPane.getChildren().remove(posOrderBox);
+                }
+                /*if(getOrderType().equals(OrderType.ALLORDER.getValue())){
+                    boxTotal.set(selectedOrderBoxs.size() + orderBoxs.size() + "個任務需要列印，請盡快處理");
+                }*/
+
+                if(posOrderData.get(0).getOrder_type().equals(OrderType.FIRSTORDER.getValue())){
+                   int j = selectedFirstOrderBoxs.indexOf(posOrderData);
+                    if(j>=0){
+                      selectedFirstOrderBoxs.remove(j);
+                        /*if(getOrderType().equals(OrderType.FIRSTORDER.getValue())){
+                            boxTotal.set(selectedFirstOrderBoxs.size() + firstOrderBoxs.size() + "個任務需要列印，請盡快處理");
+                        }*/
+                    }
+                }
+                if(posOrderData.get(0).getOrder_type().equals(OrderType.ADDORDER.getValue())){
+                    int j = selectedAddOrderBoxs.indexOf(posOrderData);
+                    if(j>=0){
+                        selectedAddOrderBoxs.remove(j);
+                       /* if(getOrderType().equals(OrderType.ADDORDER.getValue())) {
+                            boxTotal.set(selectedAddOrderBoxs.size() + addOrderBoxs.size() + "個任務需要列印，請盡快處理");
+                        }*/
+                    }
+                }
+                if(posOrderData.get(0).getOrder_type().equals(OrderType.TAILORDER.getValue())){
+                    int j = selectedLastOrderBoxs.indexOf(posOrderData);
+                    if(j>=0){
+                        selectedLastOrderBoxs.remove(j);
+                       /* if(getOrderType().equals(OrderType.TAILORDER.getValue())) {
+                            boxTotal.set(selectedLastOrderBoxs.size() + lastOrderBoxs.size() + "個任務需要列印，請盡快處理");
+                        }*/
+                    }
+                }
+                allBoxTotal.set("全部("+ (selectedOrderBoxs.size() + orderBoxs.size())+")");
+                firstBoxTotal.set("首單("+ (selectedFirstOrderBoxs.size() +firstOrderBoxs.size())+")");
+                addBoxTotal.set("加單("+ (selectedAddOrderBoxs.size() +addOrderBoxs.size())+")");
+                lastBoxTotal.set("尾單("+(selectedLastOrderBoxs.size() +lastOrderBoxs.size())+")");
+
+                for(PosOrder posOrder :posOrderData ){
+                    PrintStateEnum oldPrintState = PrintStateEnum.getPrintStateEnumByValue(posOrder.getPrint_state());
+                    if(PosOrderDao.otheridxs.containsKey(posOrder.getOrder_idx())){
+                        List<PosOrderDto> posOrderDtoList = PosOrderDao.otheridxs.get(posOrder.getOrder_idx());
+                          for(PosOrderDto posOrderDto : posOrderDtoList){
+                            PosOrderDao.updatePrintStateWithoutOldPrintState(sqlSession,PrintStateEnum.PRINTED,posOrderDto.getBill_no(), posOrderDto.getOrder_idx(), posOrderDto.getType());
+                           }
+                    }
+                    PosOrderDao.updataPrintState(sqlSession,PrintStateEnum.PRINTED, oldPrintState, posOrder.getBill_no(),posOrder.getOrder_idx(), posOrder.getType());
+                }
+                CommonPrintTask.insertPosOrdersToVBox(this);
+                CommonPrintTask.insertPosOrdersToCorrespondingBox(this);
+            }
+            else{
+                for(int i = 0;i< posOrderData.size();i++){
+                    if(i<=showcount){
+                        PrintStateEnum oldPrintState = PrintStateEnum.getPrintStateEnumByValue(posOrderData.get(i).getPrint_state());
+                        if(PosOrderDao.otheridxs.containsKey(posOrderData.get(i).getOrder_idx())){
+                            List<PosOrderDto> posOrderDtoList = PosOrderDao.otheridxs.get(posOrderData.get(i).getOrder_idx());
+                            posOrderDtoList.forEach(posOrderDto -> {
+                                PosOrderDao.updatePrintStateWithoutOldPrintState(sqlSession,PrintStateEnum.PRINTED,  posOrderDto.getBill_no(), posOrderDto.getOrder_idx(), posOrderDto.getType());
+                            });
+                        }
+                        PosOrderDao.updataPrintState(sqlSession,PrintStateEnum.PRINTED, oldPrintState, posOrderData.get(i).getBill_no(),posOrderData.get(i).getOrder_idx(), posOrderData.get(i).getType());
+                    }
+                }
+                int i = selectedOrderBoxs.indexOf(posOrderData);
+                if(i>=0){
+                    posOrderData.remove(0,showcount);
+                    ObservableList<PosOrder> orders = selectedOrderBoxs.get(i);
+                    orders = posOrderData;
+                    if(AppUtils.isNotBlank(posOrderData) && posOrderData.size()> showcount){
+                        posOrderBox.setStyle("-fx-border-color: red;-fx-border-width: 10px ");
+                    }
+                    else if(AppUtils.isNotBlank(posOrderData) &&  posOrderData.size() <= showcount){
+                        posOrderBox.setStyle("-fx-border-width: 10px ");
+                    }
+                    posOrderTab.setItems(orders);
+                }
+
+                if(posOrderData.get(0).getOrder_type().equals(OrderType.FIRSTORDER.getValue())){
+                    int j = firstOrderBoxs.indexOf(posOrderData);
+                    if(j>=0){
+                       // selectedFirstOrderBoxs.remove(0,showcount);
+                        ObservableList<PosOrder> orders = selectedFirstOrderBoxs.get(j);
+                        orders = posOrderData;
+                        if(AppUtils.isNotBlank(posOrderData) && posOrderData.size()> showcount){
+                            posOrderBox.setStyle("-fx-border-color: red;-fx-border-width: 10px ");
+                        }
+                        else if(AppUtils.isNotBlank(posOrderData) &&  posOrderData.size() <= showcount){
+                            posOrderBox.setStyle("-fx-border-width: 10px ");
+                        }
+                        posOrderTab.setItems(orders);
+                    }
+                }
+                if(posOrderData.get(0).getOrder_type().equals(OrderType.ADDORDER.getValue())){
+                    int j = selectedAddOrderBoxs.indexOf(posOrderData);
+                    if(j>=0){
+                        //selectedAddOrderBoxs.remove(j,showcount);
+                        ObservableList<PosOrder> orders = selectedAddOrderBoxs.get(j);
+                        orders = posOrderData;
+                        if(AppUtils.isNotBlank(posOrderData) && posOrderData.size()> showcount){
+                            posOrderBox.setStyle("-fx-border-color: red;-fx-border-width: 10px ");
+                        }
+                        else if(AppUtils.isNotBlank(posOrderData) &&  posOrderData.size() <= showcount){
+                            posOrderBox.setStyle("-fx-border-width: 10px ");
+                        }
+                        posOrderTab.setItems(orders);
+                    }
+                }
+                if(posOrderData.get(0).getOrder_type().equals(OrderType.TAILORDER.getValue())){
+                    int j = selectedLastOrderBoxs.indexOf(posOrderData);
+                    if(j>=0){
+                        //selectedLastOrderBoxs.remove(j,showcount);
+                        ObservableList<PosOrder> orders = selectedLastOrderBoxs.get(j);
+                        orders = posOrderData;
+                        if(AppUtils.isNotBlank(posOrderData) && posOrderData.size()> showcount){
+                            posOrderBox.setStyle("-fx-border-color: red;-fx-border-width: 10px ");
+                        }
+                        else if(AppUtils.isNotBlank(posOrderData) &&  posOrderData.size() <= showcount){
+                            posOrderBox.setStyle("-fx-border-width: 10px ");
+                        }
+                        posOrderTab.setItems(orders);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            sqlSession.rollback();
+        }
+    }
+
+    private void getPrintDataTask() {
+        Integer time = ReadProperties.readIntegerByKey("taskTime");
+        Integer pingTime = ReadProperties.readIntegerByKey("pingTime");
+        Date now = new Date();
+        Date afterDate = new Date(now .getTime() + 3000);
+        timerPrintData.schedule(new FindUnPrintListTask(this), time , time );
+        timerPrintData.schedule(new PingTask(this), pingTime , pingTime );
+    }
+
+    public void crateAlert(String title, String header, String content){
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getPosOrderData() {
+        return orderBoxs;
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getFirstPosOrderData() {
+        return firstOrderBoxs;
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getAddPosOrderData() {
+        return addOrderBoxs;
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getLastPosOrderData() {
+        return lastOrderBoxs;
+    }
+
+    public RulerDto getRulerDto(){
+        return this.rulerDto;
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getSelectedOrderBoxs(){
+        return selectedOrderBoxs;
+    }
+
+    public ObservableList<PosOrder> getOrdersByType(String  type){
+          for(ObservableList<PosOrder> p :orderBoxs){
+             if(type.equals(p.get(0).getOrder_type())){
+                 return p;
+             }
+          }
+        return null;
+    }
+    public ObservableList<PosOrder> getFirstOrdersByType(String  type){
+        for(ObservableList<PosOrder> p :firstOrderBoxs){
+            if(type.equals(p.get(0).getOrder_type())){
+                return p;
+            }
+        }
+        return null;
+    }
+    public ObservableList<PosOrder> getAddOrdersByType(String  type){
+        for(ObservableList<PosOrder> p :addOrderBoxs){
+            if(type.equals(p.get(0).getOrder_type())){
+                return p;
+            }
+        }
+        return null;
+    }
+    public ObservableList<PosOrder> getLastOrdersByType(String  type){
+        for(ObservableList<PosOrder> p :lastOrderBoxs){
+            if(type.equals(p.get(0).getOrder_type())){
+                return p;
+            }
+        }
+        return null;
+    }
+
+
+
+
+
+    public void reSetRulerDto(){
+       this.rulerDto =  new RulerDto();
+    }
+
+    public Integer getShowcount(){
+        return showcount;
+    }
+
+    public StringProperty getBoxTotal(){
+        return boxTotal;
+    }
+
+    public String getAutoPrint(){
+          return isAutoPrint.getValue();
+    }
+
+    public String getOrderType(){
+        return orderType.getValue();
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getSelectedFirstOrderBoxs(){
+        return  selectedFirstOrderBoxs;
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getSelectedAddOrderBoxs(){
+        return  selectedAddOrderBoxs;
+    }
+    public ObservableList<ObservableList<PosOrder>> getSelectedLastOrderBoxsOrderBoxs(){
+        return  selectedLastOrderBoxs;
+    }
+
+
+    public Circle getCircle() {
+        return circle;
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getOrderBoxs() {
+        return orderBoxs;
+    }
+
+    public void setOrderBoxs(ObservableList<ObservableList<PosOrder>> orderBoxs) {
+        this.orderBoxs = orderBoxs;
+    }
+
+
+    public FlowPane getFlowPane() {
+        return flowPane;
+    }
+
+    public void setFlowPane(FlowPane flowPane) {
+        this.flowPane = flowPane;
+    }
+
+
+    public String getSelectedOrderType() {
+        return selectedOrderType.get();
+    }
+
+    public StringProperty selectedOrderTypeProperty() {
+        return selectedOrderType;
+    }
+
+    public void setSelectedOrderType(String selectedOrderType) {
+        this.selectedOrderType.set(selectedOrderType);
+    }
+
+    public ObservableList<ObservableList<PosOrder>> getHangOrderBoxs() {
+        return hangOrderBoxs;
+    }
+
+    public void setHangOrderBoxs(ObservableList<ObservableList<PosOrder>> hangOrderBoxs) {
+        this.hangOrderBoxs = hangOrderBoxs;
+    }
+
+    public String getHangBoxTotal() {
+        return hangBoxTotal.get();
+    }
+
+    public StringProperty hangBoxTotalProperty() {
+        return hangBoxTotal;
+    }
+
+    public void setHangBoxTotal(String hangBoxTotal) {
+        Platform.runLater(() ->  this.hangBoxTotal.set(hangBoxTotal));
+    }
+
+    public int getOrderHangCount() {
+        return orderHangCount.get();
+    }
+
+    public IntegerProperty orderHangCountProperty() {
+        return orderHangCount;
+    }
+
+    public void setOrderHangCount(int orderHangCount) {
+        this.orderHangCount.set(orderHangCount);
+    }
+}

@@ -1,0 +1,177 @@
+package pos.dongwang.controller;
+
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.fxml.FXML;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableView;
+import javafx.scene.control.ToolBar;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.ibatis.session.SqlSession;
+import pos.dongwang.Main;
+import pos.dongwang.dto.OrderHangDto;
+import pos.dongwang.dto.TGoodsDto;
+import pos.dongwang.mapper.BranchMapper;
+import pos.dongwang.mapper.OrderHangListMapper;
+import pos.dongwang.mapper.TGoodsDtoMapper;
+import pos.dongwang.model.PosOrder;
+import pos.dongwang.model.TGoods;
+import pos.dongwang.properties.ReadProperties;
+import pos.dongwang.util.AppUtils;
+import pos.dongwang.util.SendUtils;
+import pos.dongwang.util.SqlSessionUtil;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by lodi on 2017/11/17.
+ */
+public class HangTableController {
+
+
+
+    @FXML
+    private FlowPane tablesFlowPane;
+
+    @FXML
+    private FlowPane buttomFlowPane;
+
+    @FXML
+    private Button upPageButton;
+
+    @FXML
+    private Button downPageButton;
+
+    @FXML
+    private Button closeButton;
+
+    private Integer page;
+
+    private Main main;
+
+    private Stage stage;
+
+
+    public void addTables(Integer page){
+        this.page = page;
+        List<OrderHangDto> orderHangDtoList = SqlSessionUtil.getSqlSession().getMapper(OrderHangListMapper.class).getOrderHangList(page,32);
+        if(AppUtils.isNotBlank(orderHangDtoList)) {
+            if (tablesFlowPane.getChildren() != null && tablesFlowPane.getChildren().size() > 0) {
+                tablesFlowPane.getChildren().remove(0, tablesFlowPane.getChildren().size());
+            }
+                for (OrderHangDto orderHangDto : orderHangDtoList) {
+                    Button button = new Button();
+                    button.setText(orderHangDto.getTableNum());
+                    button.setPrefWidth(tablesFlowPane.getPrefWidth()/10);
+                    button.setPrefHeight(tablesFlowPane.getPrefWidth()/11);
+                    button.setStyle("-fx-text-alignment: center;-fx-text-fill: white; -fx-background-color: chocolate;-fx-font-weight: bolder; -fx-font-size: 30");
+                    button.setOnAction(event -> {
+                      ObservableList<ObservableList<PosOrder>> hangOrders = main.getHangOrderBoxs();
+                      for(ObservableList<PosOrder> posOrders : hangOrders){
+                          if(orderHangDto.getTableNum().equals(posOrders.get(0).getTable_no())){
+                                  main.getFlowPane().getChildren().remove(0,main.getFlowPane().getChildren().size());
+                                  if(main.getSelectedHangOrderBoxs()!= null && main.getSelectedHangOrderBoxs().size()>0){
+                                      main.getSelectedHangOrderBoxs().remove(0,main.getSelectedHangOrderBoxs().size());
+                                  }
+                              main.getSelectedHangOrderBoxs().add(posOrders);
+                              stage.close();
+                          }
+                      }
+                    });
+                    tablesFlowPane.getChildren().add(button);
+                }
+        }
+    }
+
+    @FXML
+    public void nextPage(){
+        Integer nextPage = page + 1;
+        List<OrderHangDto> orderHangDtoList = SqlSessionUtil.getSqlSession().getMapper(OrderHangListMapper.class).getOrderHangList(nextPage,32);
+        if(AppUtils.isNotBlank(orderHangDtoList)){
+            tablesFlowPane.getChildren().remove(0,tablesFlowPane.getChildren().size());
+            addTables(nextPage);
+        }
+    }
+
+    @FXML
+    public void previousPage(){
+        Integer previousPage = page -1;
+        if(previousPage >= 0 ){
+            List<OrderHangDto> orderHangDtoList = SqlSessionUtil.getSqlSession().getMapper(OrderHangListMapper.class).getOrderHangList(previousPage,32);
+            if(AppUtils.isNotBlank(orderHangDtoList)){
+                tablesFlowPane.getChildren().remove(0,tablesFlowPane.getChildren().size());
+                addTables(previousPage);
+            }
+        }
+
+    }
+
+
+
+
+
+    public FlowPane getTablesFlowPane() {
+        return tablesFlowPane;
+    }
+
+    public void setTablesFlowPane(FlowPane tablesFlowPane) {
+        this.tablesFlowPane = tablesFlowPane;
+    }
+
+    public FlowPane getButtomFlowPane() {
+        return buttomFlowPane;
+    }
+
+    public void setButtomFlowPane(FlowPane buttomFlowPane) {
+        this.buttomFlowPane = buttomFlowPane;
+    }
+
+    public Button getUpPageButton() {
+        return upPageButton;
+    }
+
+    public void setUpPageButton(Button upPageButton) {
+        this.upPageButton = upPageButton;
+    }
+
+    public Button getDownPageButton() {
+        return downPageButton;
+    }
+
+    public void setDownPageButton(Button downPageButton) {
+        this.downPageButton = downPageButton;
+    }
+
+    public Button getCloseButton() {
+        return closeButton;
+    }
+
+    public void setCloseButton(Button closeButton) {
+        this.closeButton = closeButton;
+    }
+
+    public Main getMain() {
+        return main;
+    }
+
+    public void setMain(Main main) {
+        this.main = main;
+    }
+
+    public Stage getStage() {
+        return stage;
+    }
+
+    public void setStage(Stage stage) {
+        this.stage = stage;
+    }
+}

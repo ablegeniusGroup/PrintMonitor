@@ -1,0 +1,267 @@
+11:37:48.564 [JavaFX Application Thread] DEBUG m.p.d.m.T.getTopButtons BaseJdbcLogger.java:159 debug - ==>  Preparing: select * from TOP_BUTTON 
+11:37:48.949 [JavaFX Application Thread] DEBUG m.p.d.m.T.getTopButtons BaseJdbcLogger.java:159 debug - ==> Parameters: 
+11:37:49.589 [JavaFX Application Thread] DEBUG m.p.d.m.T.getTopButtons BaseJdbcLogger.java:159 debug - <==      Total: 11
+11:37:49.733 [JavaFX Application Thread] DEBUG m.p.d.m.T.getOutOfStockTGoodsDto BaseJdbcLogger.java:159 debug - ==>  Preparing: select g.GoodsNo as goodsNo,g.NAME1 as goodName1 from T_goods g where g.GoodsNo in (SELECT su.GoodsNo FROM SUSPENDI su where su.auto_pause = 'TRUE' ) or g.GoodsNo in (select k.GoodsNo from ITEM_STK k where k.STOCK = 0.00 ) 
+11:37:49.736 [JavaFX Application Thread] DEBUG m.p.d.m.T.getOutOfStockTGoodsDto BaseJdbcLogger.java:159 debug - ==> Parameters: 
+11:37:50.105 [Timer-0] DEBUG m.p.d.m.O.autoDeleteOrderHangListByRefNum BaseJdbcLogger.java:159 debug - ==>  Preparing: delete from ORDER_HANG_LIST with(READPAST) where LONG_DATE <= ? 
+11:37:50.120 [Timer-0] DEBUG m.p.d.m.O.autoDeleteOrderHangListByRefNum BaseJdbcLogger.java:159 debug - ==> Parameters: 1524195470098(Long)
+11:37:50.134 [JavaFX Application Thread] DEBUG m.p.d.m.T.getOutOfStockTGoodsDto BaseJdbcLogger.java:159 debug - <==      Total: 3
+11:37:50.185 [Timer-0] DEBUG m.p.d.m.O.autoDeleteOrderHangListByRefNum BaseJdbcLogger.java:159 debug - <==    Updates: 0
+11:37:50.249 [Timer-0] DEBUG m.p.d.m.P.getPosOrderListInit BaseJdbcLogger.java:159 debug - ==>  Preparing: select rd.bill_no, rd.sub_no, rd.type, rd.table_no, rd.goodsno, rd.order_idx, t.name1, t.print_info, rd.rt_op_date, rb.IN_DATE, rd.rt_op_time, rd.s_code, rd.seal_count + isnull(rd.CANCEL_COUNT,0) as seal_count , rd.amt, rd.print_state, tp.single_prt, tk.name1 as t_kic_msg, rb.pos_id, tp.name1 as print_name, rd.barcode, sc.name1 as staff, tb.zone, rs.NAME1 as r_desc, isnull(ts.name1,'')+ isnull(' '+rs.name1,'')+ isnull(' '+tk.name1,'') as print_msg, bc.line as region_id, isnull(rp.person_num, 0 ) person_num, ts.name1 as att_name, (case when DATEDIFF(second, rm.min_time, rd.rt_op_time) = 0 then '首單' when DATEDIFF(second, rm.min_time, rd.rt_op_time) > 720 then '尾單' else '加單' end) as order_type from rt_bill_detail rd with(READPAST) left join t_goods t on rd.goodsno = t.goodsno left join t_printer tp on t.print_info = tp.ptn_code left join t_kic_msg tk on tk.code = rd.t_kic_msg left join rt_order_bill rb on rb.bill_no = rd.bill_no and rd.type = rb.bill_t left join s_code sc on sc.code = rd.s_code left join [TABLE] tb on tb.table_no = rd.table_no left join r_desc rs on rs.CODE = rd.R_DESC left join BARCODE bc on bc.BARCODE = rd.BARCODE left join rt_order_ts ro on rd.order_idx = ro.order_idx left join order_ts ts on ts.code = ro.tss_code and ts.a_group = rd.goodsno left join (select rd.BILL_NO,sum(rd.SEAL_COUNT) as person_num from rt_bill_detail rd LEFT JOIN t_goods t on rd.goodsno = t.goodsno where t.CAT = '054' and rd.TYPE ='N' group by rd.BILL_NO) rp on rp.BILL_NO = rd.BILL_NO left join (select rd.BILL_NO, MIN(rd.RT_OP_TIME) as min_time from rt_bill_detail rd LEFT JOIN t_goods t on rd.goodsno = t.goodsno where t.CAT not in ('054','007') and rd.TYPE ='N' and t.print_info in ( '0A' , '0B' , '0C' ) GROUP BY rd.BILL_NO) rm on rm.BILL_NO = rd.BILL_NO where rd.type = 'N' and (rd.print_state in ('UNPRINT', 'PREPRINT' , 'MSG', 'HANG') or rd.print_state is null) and t.print_info in ( '0A' , '0B' , '0C' ) and not exists ( select * from order_hang_list h where ? between h.HANG_TIME and h.RELEASE_TIME and h.ref_num =rd.bill_no ) order by cast(isnull(t.IN_DECIMAL,'0') as int), rd.rt_op_date,rd.order_idx 
+11:37:50.251 [Timer-0] DEBUG m.p.d.m.P.getPosOrderListInit BaseJdbcLogger.java:159 debug - ==> Parameters: 2018-04-20 11:37:50.098(Timestamp)
+11:37:51.065 [Timer-0] DEBUG m.p.d.m.P.getPosOrderListInit BaseJdbcLogger.java:159 debug - <==      Total: 72
+11:37:51.100 [Timer-0] DEBUG m.p.d.m.P.getHangPosOrderList BaseJdbcLogger.java:159 debug - ==>  Preparing: select rd.bill_no,rd.sub_no,rd.type,rd.table_no,rd.goodsno,rd.order_idx,rb.IN_DATE, t.name1,t.print_info,rd.rt_op_date,rd.rt_op_time,rd.s_code,rd.seal_count + isnull(rd.CANCEL_COUNT,0) as seal_count,rd.amt,rd.print_state,tp.single_prt, tk.name1 as t_kic_msg,rb.pos_id, tp.name1 as print_name, rd.barcode,sc.name1 as staff, tb.zone,rs.NAME1 as r_desc, isnull(ts.name1,'')+ isnull(' '+rs.name1,'')+ isnull(' '+tk.name1,'') as print_msg, bc.line as region_id, isnull(rp.person_num, 0 ) person_num, ts.name1 as att_name, (case when DATEDIFF(second, rm.min_time, rd.rt_op_time) = 0 then '首單' when DATEDIFF(second, rm.min_time, rd.rt_op_time) > 720 then '尾單' else '加單' end) as order_type from rt_bill_detail rd with(READPAST) left join t_goods t on rd.goodsno = t.goodsno left join t_printer tp on t.print_info = tp.ptn_code left join t_kic_msg tk on tk.code = rd.t_kic_msg left join rt_order_bill rb on rb.bill_no = rd.bill_no and rd.type = rb.bill_t left join s_code sc on sc.code = rd.s_code left join [TABLE] tb on tb.table_no = rd.table_no left join r_desc rs on rs.CODE = rd.R_DESC left join BARCODE bc on bc.BARCODE = rd.BARCODE left join rt_order_ts ro on rd.order_idx = ro.order_idx left join order_ts ts on ts.CODE = ro.tss_code and ts.a_group = rd.goodsno left join (select rd.BILL_NO,sum(rd.SEAL_COUNT) as person_num from rt_bill_detail rd LEFT JOIN t_goods t on rd.goodsno = t.goodsno where t.CAT = '054' and rd.TYPE ='N' and t.print_info in ( '0A' , '0B' , '0C' ) group by rd.BILL_NO) rp on rp.BILL_NO = rd.BILL_NO left join (select BILL_NO, MIN(RT_OP_TIME) as min_time from rt_bill_detail GROUP BY BILL_NO) rm on rm.BILL_NO = rd.BILL_NO where rd.type = 'N' and rd.print_state in('HANG') and t.print_info in ( '0A' , '0B' , '0C' ) and exists ( select * from order_hang_list h where ? between h.HANG_TIME and h.RELEASE_TIME and h.ref_num =rd.bill_no ) order by cast(isnull(t.IN_DECIMAL,'0') as int), rd.rt_op_date,rd.order_idx 
+11:37:51.104 [Timer-0] DEBUG m.p.d.m.P.getHangPosOrderList BaseJdbcLogger.java:159 debug - ==> Parameters: 2018-04-20 11:37:50.098(Timestamp)
+11:37:51.161 [Timer-0] DEBUG m.p.d.m.P.getHangPosOrderList BaseJdbcLogger.java:159 debug - <==      Total: 0
+11:37:51.174 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.176 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136062(Long), N(String), PREPRINT(String)
+11:37:51.221 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.223 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.225 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136060(Long), N(String), PREPRINT(String)
+11:37:51.226 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.229 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.229 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136054(Long), N(String), PREPRINT(String)
+11:37:51.231 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.233 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.235 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136063(Long), N(String), PREPRINT(String)
+11:37:51.238 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.240 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.242 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136056(Long), N(String), PREPRINT(String)
+11:37:51.244 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.247 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.248 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136058(Long), N(String), PREPRINT(String)
+11:37:51.250 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.252 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.253 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136059(Long), N(String), PREPRINT(String)
+11:37:51.255 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.256 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.257 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136055(Long), N(String), PREPRINT(String)
+11:37:51.259 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.261 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.261 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136064(Long), N(String), PREPRINT(String)
+11:37:51.263 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.266 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.267 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136061(Long), N(String), PREPRINT(String)
+11:37:51.268 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.271 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.273 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07313(String), 136057(Long), N(String), PREPRINT(String)
+11:37:51.276 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.289 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==>  Preparing: select LINE from BARCODE where BARCODE = ? 
+11:37:51.291 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==> Parameters: 200101(String)
+11:37:51.305 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:37:51.333 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - ==>  Preparing: select count(distinct RT_OP_TIME) from RT_BILL_DETAIL with(READPAST) where BILL_NO = ? 
+11:37:51.336 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - ==> Parameters: 07313(String)
+11:37:51.343 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:37:51.348 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.349 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136039(Long), N(String), PREPRINT(String)
+11:37:51.351 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.354 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.355 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136041(Long), N(String), PREPRINT(String)
+11:37:51.358 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.361 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.362 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136046(Long), N(String), PREPRINT(String)
+11:37:51.364 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.366 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.368 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136044(Long), N(String), PREPRINT(String)
+11:37:51.541 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.544 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.545 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136043(Long), N(String), PREPRINT(String)
+11:37:51.548 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.552 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.553 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136051(Long), N(String), PREPRINT(String)
+11:37:51.559 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.564 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.565 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136048(Long), N(String), PREPRINT(String)
+11:37:51.574 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.580 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.581 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136042(Long), N(String), PREPRINT(String)
+11:37:51.584 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.591 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.592 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136049(Long), N(String), PREPRINT(String)
+11:37:51.594 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.598 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.599 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136052(Long), N(String), PREPRINT(String)
+11:37:51.604 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.607 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.607 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136045(Long), N(String), PREPRINT(String)
+11:37:51.611 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.613 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.615 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136047(Long), N(String), PREPRINT(String)
+11:37:51.618 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.620 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.621 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136050(Long), N(String), PREPRINT(String)
+11:37:51.624 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.626 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.627 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07312(String), 136040(Long), N(String), PREPRINT(String)
+11:37:51.778 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.798 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - ==>  Preparing: select count(distinct RT_OP_TIME) from RT_BILL_DETAIL with(READPAST) where BILL_NO = ? 
+11:37:51.799 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - ==> Parameters: 07312(String)
+11:37:51.803 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:37:51.807 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.829 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135899(Long), N(String), PREPRINT(String)
+11:37:51.849 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.853 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.855 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135896(Long), N(String), PREPRINT(String)
+11:37:51.857 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.860 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.861 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135895(Long), N(String), PREPRINT(String)
+11:37:51.863 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.866 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.873 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135889(Long), N(String), PREPRINT(String)
+11:37:51.876 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.879 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.880 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135888(Long), N(String), PREPRINT(String)
+11:37:51.884 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.887 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.888 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135898(Long), N(String), PREPRINT(String)
+11:37:51.892 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.895 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.895 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135901(Long), N(String), PREPRINT(String)
+11:37:51.898 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.902 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.903 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135893(Long), N(String), PREPRINT(String)
+11:37:51.903 [pool-3-thread-2] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==>  Preparing: select LINE from BARCODE where BARCODE = ? 
+11:37:51.905 [pool-3-thread-2] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==> Parameters: 200101(String)
+11:37:51.907 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.909 [pool-3-thread-2] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:37:51.909 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.910 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135900(Long), N(String), PREPRINT(String)
+11:37:51.914 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.919 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.920 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135892(Long), N(String), PREPRINT(String)
+11:37:51.922 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.924 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.925 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135894(Long), N(String), PREPRINT(String)
+11:37:51.928 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.931 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.932 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135890(Long), N(String), PREPRINT(String)
+11:37:51.983 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.991 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.992 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135891(Long), N(String), PREPRINT(String)
+11:37:51.994 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:51.998 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:51.999 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07288(String), 135897(Long), N(String), PREPRINT(String)
+11:37:52.001 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.043 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - ==>  Preparing: select count(distinct RT_OP_TIME) from RT_BILL_DETAIL with(READPAST) where BILL_NO = ? 
+11:37:52.044 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - ==> Parameters: 07288(String)
+11:37:52.048 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:37:52.050 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.051 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07310(String), 136014(Long), N(String), PREPRINT(String)
+11:37:52.054 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.065 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==>  Preparing: select LINE from BARCODE where BARCODE = ? 
+11:37:52.065 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==> Parameters: 200101(String)
+11:37:52.071 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:37:52.094 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - ==>  Preparing: select count(distinct RT_OP_TIME) from RT_BILL_DETAIL with(READPAST) where BILL_NO = ? 
+11:37:52.095 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - ==> Parameters: 07310(String)
+11:37:52.110 [Timer-0] DEBUG m.p.d.m.P.getOrderCountsByBillNo BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:37:52.110 [pool-3-thread-3] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ====>  Preparing: select LINE from BARCODE where BARCODE = ? 
+11:37:52.111 [pool-3-thread-3] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ====> Parameters: 200101(String)
+11:37:52.112 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.113 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135981(Long), N(String), PREPRINT(String)
+11:37:52.119 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.122 [pool-3-thread-3] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - <====      Total: 1
+11:37:52.124 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.125 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135980(Long), N(String), PREPRINT(String)
+11:37:52.127 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.239 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.240 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135978(Long), N(String), PREPRINT(String)
+11:37:52.244 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.247 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.266 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135977(Long), N(String), PREPRINT(String)
+11:37:52.270 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.275 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.276 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135976(Long), N(String), PREPRINT(String)
+11:37:52.278 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.281 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.282 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135975(Long), N(String), PREPRINT(String)
+11:37:52.284 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.290 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.291 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135974(Long), N(String), PREPRINT(String)
+11:37:52.293 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.296 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.297 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135979(Long), N(String), PREPRINT(String)
+11:37:52.299 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.303 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.304 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135982(Long), N(String), PREPRINT(String)
+11:37:52.306 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.309 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.498 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07270(String), 135973(Long), N(String), PREPRINT(String)
+11:37:52.501 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.504 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.511 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135955(Long), N(String), PREPRINT(String)
+11:37:52.511 [pool-3-thread-2] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==>  Preparing: select LINE from BARCODE where BARCODE = ? 
+11:37:52.512 [pool-3-thread-2] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==> Parameters: 200101(String)
+11:37:52.514 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.516 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.516 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135954(Long), N(String), PREPRINT(String)
+11:37:52.518 [pool-3-thread-2] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:37:52.521 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.523 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.525 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135959(Long), N(String), PREPRINT(String)
+11:37:52.733 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.736 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.737 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135960(Long), N(String), PREPRINT(String)
+11:37:52.738 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.741 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.742 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135963(Long), N(String), PREPRINT(String)
+11:37:52.744 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.747 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.748 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135962(Long), N(String), PREPRINT(String)
+11:37:52.750 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.753 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.754 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135956(Long), N(String), PREPRINT(String)
+11:37:52.756 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.759 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.760 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135957(Long), N(String), PREPRINT(String)
+11:37:52.762 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.765 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.765 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135951(Long), N(String), PREPRINT(String)
+11:37:52.767 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.772 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.773 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135958(Long), N(String), PREPRINT(String)
+11:37:52.774 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.778 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.779 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135961(Long), N(String), PREPRINT(String)
+11:37:52.780 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.782 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.783 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135969(Long), N(String), PREPRINT(String)
+11:37:52.785 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.787 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.788 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135965(Long), N(String), PREPRINT(String)
+11:37:52.790 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.792 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.793 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135968(Long), N(String), PREPRINT(String)
+11:37:52.794 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.797 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.797 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135972(Long), N(String), PREPRINT(String)
+11:37:52.799 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.802 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.802 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135966(Long), N(String), PREPRINT(String)
+11:37:52.805 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.808 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.808 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135970(Long), N(String), PREPRINT(String)
+11:37:52.810 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.813 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.813 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135971(Long), N(String), PREPRINT(String)
+11:37:52.815 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.818 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.828 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135967(Long), N(String), PREPRINT(String)
+11:37:52.830 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.832 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.833 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135964(Long), N(String), PREPRINT(String)
+11:37:52.835 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.840 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.841 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135953(Long), N(String), PREPRINT(String)
+11:37:52.843 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.846 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==>  Preparing: update rt_bill_detail with(READPAST) set print_state= ? where bill_no = ? and order_idx= ? and type = ? and ( print_state = ? or print_state is null) 
+11:37:52.846 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - ==> Parameters: PREPRINT(String), 07295(String), 135952(Long), N(String), PREPRINT(String)
+11:37:52.849 [Timer-0] DEBUG m.p.d.m.P.updatePrintState BaseJdbcLogger.java:159 debug - <==    Updates: 1
+11:37:52.854 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==>  Preparing: select LINE from BARCODE where BARCODE = ? 
+11:37:52.855 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - ==> Parameters: 200101(String)
+11:37:52.857 [pool-3-thread-1] DEBUG m.p.d.m.B.getLineByBarcode BaseJdbcLogger.java:159 debug - <==      Total: 1
+11:38:00.071 [Timer-0] DEBUG m.p.d.m.O.autoDeleteOrderHangListByRefNum BaseJdbcLogger.java:159 debug - ==>  Preparing: delete from ORDER_HANG_LIST with(READPAST) where LONG_DATE <= ? 
+11:38:00.072 [Timer-0] DEBUG m.p.d.m.O.autoDeleteOrderHangListByRefNum BaseJdbcLogger.java:159 debug - ==> Parameters: 1524195480071(Long)
+11:38:00.074 [Timer-0] DEBUG m.p.d.m.O.autoDeleteOrderHangListByRefNum BaseJdbcLogger.java:159 debug - <==    Updates: 0
+11:38:00.079 [Timer-0] DEBUG m.p.d.m.P.getPosOrderList BaseJdbcLogger.java:159 debug - ==>  Preparing: select rd.bill_no,rd.sub_no,rd.type,rd.table_no,rd.goodsno,rd.order_idx,rb.IN_DATE, t.name1,t.print_info,rd.rt_op_date,rd.rt_op_time,rd.s_code,rd.seal_count + isnull(rd.CANCEL_COUNT,0) as seal_count,rd.amt,rd.print_state,tp.single_prt, tk.name1 as t_kic_msg,rb.pos_id, tp.name1 as print_name, rd.barcode,sc.name1 as staff, tb.zone,rs.NAME1 as r_desc, isnull(ts.name1,'')+ isnull(' '+rs.name1,'')+ isnull(' '+tk.name1,'') as print_msg, bc.line as region_id, isnull(rp.person_num, 0 ) person_num, ts.name1 as att_name, (case when DATEDIFF(second, rm.min_time, rd.rt_op_time) = 0 then '首單' when DATEDIFF(second, rm.min_time, rd.rt_op_time) > 720 then '尾單' else '加單' end) as order_type from rt_bill_detail rd with(READPAST) left join t_goods t on rd.goodsno = t.goodsno left join t_printer tp on t.print_info = tp.ptn_code left join t_kic_msg tk on tk.code = rd.t_kic_msg left join rt_order_bill rb on rb.bill_no = rd.bill_no and rd.type = rb.bill_t left join s_code sc on sc.code = rd.s_code left join [TABLE] tb on tb.table_no = rd.table_no left join r_desc rs on rs.CODE = rd.R_DESC left join BARCODE bc on bc.BARCODE = rd.BARCODE left join rt_order_ts ro on rd.order_idx = ro.order_idx left join order_ts ts on ts.CODE = ro.tss_code and ts.a_group = rd.goodsno left join (select rd.BILL_NO,sum(rd.SEAL_COUNT) as person_num from rt_bill_detail rd LEFT JOIN t_goods t on rd.goodsno = t.goodsno where t.CAT = '054' and rd.TYPE ='N' group by rd.BILL_NO) rp on rp.BILL_NO = rd.BILL_NO left join (select rd.BILL_NO, MIN(rd.RT_OP_TIME) as min_time from rt_bill_detail rd LEFT JOIN t_goods t on rd.goodsno = t.goodsno where t.CAT not in ('054','007') and rd.TYPE ='N' and t.print_info in ( '0A' , '0B' , '0C' ) GROUP BY rd.BILL_NO) rm on rm.BILL_NO = rd.BILL_NO where rd.type = 'N' and (rd.print_state in('UNPRINT', 'MSG','HANG') or rd.print_state is null) and t.print_info in ( '0A' , '0B' , '0C' ) and not exists ( select * from order_hang_list h where ? between h.HANG_TIME and h.RELEASE_TIME and h.ref_num =rd.bill_no ) order by cast(isnull(t.IN_DECIMAL,'0') as int), rd.rt_op_date,rd.order_idx 
+11:38:00.080 [Timer-0] DEBUG m.p.d.m.P.getPosOrderList BaseJdbcLogger.java:159 debug - ==> Parameters: 2018-04-20 11:38:00.071(Timestamp)
+11:38:00.154 [Timer-0] DEBUG m.p.d.m.P.getPosOrderList BaseJdbcLogger.java:159 debug - <==      Total: 0

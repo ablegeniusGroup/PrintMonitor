@@ -1,0 +1,37 @@
+.flowPane{
+    -fx-background-color: #34495E;
+    -fx-alignment: center;
+    -fx-border-color: red;
+    -fx-border-width: 2px;
+}
+.contentLabel{
+    -fx-background-color: #1d1d1d;
+    -fx-alignment: center;
+    -fx-font-weight: bolder;
+    -fx-font-size: 25px;
+    -fx-text-fill: red;
+}
+.titleLabel{
+    -fx-background-color: #1d1d1d;
+    -fx-alignment: center;
+    -fx-font-weight: bolder;
+    -fx-font-size: 35px;
+    -fx-text-fill:white;
+}
+.buttomFlowPane{
+    -fx-background-color: #1d1d1d;
+   /* -fx-background-color: #34495E;*/
+    -fx-alignment: center;
+}
+.button{
+    -fx-background-color: #fcc101;
+    -fx-alignment: center;
+    -fx-font-weight: bolder;
+    -fx-font-size: 25px;
+/*    -fx-border-color: white;
+    -fx-border-width: 1px;*/
+    -fx-text-fill: white;
+}
+
+
+

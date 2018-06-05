@@ -1,0 +1,14 @@
+package com.dw.pos.message.dao;
+
+import com.baomidou.mybatisplus.mapper.BaseMapper;
+import com.dw.pos.message.entity.RtLog;
+import org.apache.ibatis.annotations.Param;
+
+/**
+ *
+ * Created by li.yongliang on 2017/8/25.
+ */
+public interface RtLogMapper extends BaseMapper<RtLog>{
+    public void insertTLog(@Param("outlet") String outlet, @Param("opDate") String opDate, @Param("opTime") String opTime, @Param("staff") String staff,
+                           @Param("logT") String logT, @Param("type") String type, @Param("tranIndex") String tranIndex, @Param("newRef") String newRef, @Param("tableNum") String tableNum);
+}

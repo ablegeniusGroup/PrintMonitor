@@ -1,0 +1,16 @@
+#serverAdd=192.168.90.200@comment@\u6578\u64DA\u5EABIP
+#dbbase=Taoheung200101@comment@\u8A2A\u554F\u6578\u64DA\u5EAB
+#dbuser=sa@comment@\u6578\u64DA\u5EAB\u8CEC\u6236
+#dbpasswd=Taoheung2014@comment@\u6578\u64DA\u5EAB\u5BC6\u78BC
+encode=BIG5@comment@\u7CFB\u7D71\u7DE8\u78BC
+databaseType=sqlserver@comment@\u6578\u64DA\u5EAB\u985E\u578B
+databaseProt=1433@comment@\u6578\u64DA\u5EAB\u7AEF\u53E3
+messageUrl=http\://192.168.171.112\:8070/message@comment@\u672C\u5730\u670D\u52A1\u5730\u5740
+showCount=15@comment@\u5217\u8868\u986F\u793A\u884C\u6578
+boudRate=9600@comment@\u6CE2\u7279\u7387
+timeInterval=300@comment@\u5C3E\u55AE\u9593\u9694(\u79D2)
+printPort=COM4@comment@\u6253\u5370\u7AEF\u53E3
+outlet=200101@comment@\u5206\u5E97\u7DE8\u865F
+receivePrinter=01@comment@\u63A5\u6536\u6253\u5370\u6A5F
+taskTime=20000@comment@\u7DDA\u7A0B\u5EF6\u9072\u6642\u9593
+autoPrint=OFF@comment@\u81EA\u52D5\u5217\u5370

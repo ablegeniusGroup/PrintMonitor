@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="pos.dongwang.mapper.OrderHangListMapper">
+
+    <resultMap id="BaseResultMap" type="pos.dongwang.dto.OrderHangListDto">
+        <result column="REF_NUM" property="refNum"  />
+        <result column="HANG_TIME" property="hangTime" />
+        <result column="RELEASE_TIME" property="releaseTime" />
+    </resultMap>
+
+  <resultMap id="BaseResultDtoMap" type="pos.dongwang.dto.OrderHangDto">
+        <result column="REF_NUM" property="billNo"  />
+        <result column="table_no" property="tableNum" />
+    </resultMap>
+
+
+    <insert id="addOrderHangList">
+  insert into ORDER_HANG_LIST  values(#{refNum},#{hangTime},#{releaseTime},#{longDate})
+    </insert>
+
+ <select id="getOrderHangListCountByDate" resultType="java.lang.Long">
+     select count(*) from ORDER_HANG_LIST with(READPAST) where #{nowDate} between HANG_TIME and RELEASE_TIME
+ </select>
+
+    <delete id="deleteOrderHangListByRefNum">
+         delete from ORDER_HANG_LIST with(READPAST)  where REF_NUM = #{refNum} and LONG_DATE = #{longDate}
+    </delete>
+
+    <delete id="autoDeleteOrderHangListByRefNum">
+        delete from ORDER_HANG_LIST with(READPAST)  where  LONG_DATE &lt;= #{longDate}
+    </delete>
+
+    <select id="getOrderHangList" resultMap="BaseResultDtoMap">
+     select   distinct  top ${pageSize} ohl.REF_NUM,
+     CASE when  rob.table_no is not null THEN rob.table_no ELSE robs.TABLE_NO END as table_no
+     from ORDER_HANG_LIST as ohl
+left join RT_ORDER_BILL rob on rob.bill_no = ohl.ref_num left join rt_order_bill_his robs on robs.bill_no = ohl.ref_num  where ohl.REF_NUM not in (
+select   top ${page * pageSize} oh.REF_NUM  from ORDER_HANG_LIST as oh order by oh.HANG_TIME
+)
+    </select>
+
+
+
+
+
+</mapper>

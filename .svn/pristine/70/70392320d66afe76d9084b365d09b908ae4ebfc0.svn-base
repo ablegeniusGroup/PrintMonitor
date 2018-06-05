@@ -1,0 +1,167 @@
+package pos.dongwang.task;
+
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import pos.dongwang.Main;
+import pos.dongwang.dao.PosOrderDao;
+import pos.dongwang.dto.PosOrderDto;
+import pos.dongwang.enums.PrintStateEnum;
+import pos.dongwang.model.PosOrder;
+import pos.dongwang.print.GetPrintOrReportStr;
+import pos.dongwang.print.PrintRxTx;
+import pos.dongwang.print.PrintRxTxVirtaul;
+import pos.dongwang.properties.ReadProperties;
+import pos.dongwang.util.AppUtils;
+import pos.dongwang.util.DateUtil;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * Created by wenjing on 2017/10/19.
+ * 啟動線程
+ */
+public class FindUnPrintListTask extends TimerTask {
+
+    private Main main;
+    private String receivePrinter;
+    private Integer showCount;
+    private String timeInterval;
+
+
+    public FindUnPrintListTask(Main main) {
+        this.main = main;
+        receivePrinter = getPrintList(ReadProperties.readStringByKey("receivePrinter"));
+        showCount = ReadProperties.readIntegerByKey("showCount");
+        timeInterval = ReadProperties.readStringByKey("timeInterval");
+
+
+    }
+
+    @Override
+    public void run() {
+        Map<String, List<PosOrderDto>> posmap = new HashMap<>();
+        if (main.getPosOrderData().size() == 0) {
+            posmap = PosOrderDao.getPosOrderListInit(receivePrinter, timeInterval);
+        } else {
+            posmap = PosOrderDao.getPosOrderList(receivePrinter, timeInterval);
+        }
+
+
+        //System.out.println("臺號列表：" + posmap.size());
+        posmap.forEach((k, posmaplist) -> {
+
+
+            int loopCount = (int) Math.ceil((double) posmaplist.size() / showCount);
+            // System.out.println("臺號:" + k + "長度：" + posmaplist.size() + "分組：" + loopCount);
+            for (int i = 1; i <= loopCount; i++) {
+                int fromindex = i * showCount - showCount;
+                int toindex = i * showCount > posmaplist.size() ? posmaplist.size() : i * showCount;
+                ObservableList<PosOrder> posOrderData = FXCollections.observableArrayList();
+                //    System.out.println("開始：" + fromindex + "至：" + toindex);
+                int finalI = i;
+                posmaplist.subList(fromindex, toindex).forEach(posDetail -> {
+                    // System.out.println("臺號" + k + "組別:" + finalI + " 單號：" + posDetail.getBill_no() + " 食品：" + posDetail.getName1());
+                    posOrderData.add(new PosOrder(posDetail.getBill_no(), posDetail.getSub_no(), posDetail.getType(), posDetail.getTable_no(), posDetail.getGoodsno(),
+                            posDetail.getOrder_idx(), posDetail.getName1(), posDetail.getPrint_info(), DateUtil.getFormatDay(posDetail.getRt_op_date()), DateUtil.getFormatTime(posDetail.getRt_op_time()), posDetail.getS_code(), posDetail.getSeal_count(), posDetail.getAmt().doubleValue(), posDetail.getPrint_state(), posDetail.getSingle_prt(), posDetail.getT_kic_msg(), posDetail.getPos_id(), posDetail.getPrint_name(), posDetail.getBarcode(), posDetail.getStaff(), posDetail.getZone(), posDetail.getR_desc(), posDetail.getPrint_msg(), posDetail.getRegion_id(), posDetail.getPerson_num(), posDetail.getAtt_name(), posDetail.getOrder_type()));
+                    PrintStateEnum oldPrintState = PrintStateEnum.getPrintStateEnumByValue(posDetail.getPrint_state());
+                    PosOrderDao.updataPrintState(PrintStateEnum.PREPRINT, oldPrintState, posDetail.getBill_no(), posDetail.getOrder_idx(), posDetail.getType());
+
+                });
+                String autoPrint = ReadProperties.readStringByKey("autoPrint");
+                if (autoPrint.equals("ON")) {
+                    System.out.println("print_______________________");
+                    List<String> list = new LinkedList<String>();
+                    posOrderData.forEach(posOrder -> {
+                        list.add(posOrder.getName1() + "|R" + posOrder.getSeal_count() + "|R" + posOrder.getPrint_msg());
+                    });
+
+                    String[] tableStyle = {
+                            "~0,90,35,85",
+                            "#BIG",
+                            "#CENTER",
+                            "$|PRN_NAM |ORDER_TYPE",
+                            "#GOHEAD1",
+                            "$檯號：|TABLE_NAM| 區域：|ZONE",
+                            "#GOHEAD1",
+                            "#SMALL",
+                            "#LEFT",
+                            "$賬單編號：|REF_NUM| 人数：|PERSON",
+                            "$BARCODE|/|STATION|-|STAFF| |POSDATE",
+                            "#R|3|COMPART",
+                            "* 菜品名稱|R數量|R備註",
+                            "#R|3|COMPART",
+                            "%ORDERLIST",
+                            "#R|3|COMPART",
+                            "#GOHEAD5",
+                            "#CUTPAPER"
+                    };
+
+                    HashMap<String, String> printmessage = new HashMap<String, String>();
+                    printmessage.put("PRN_NAM", posOrderData.get(0).getPrint_name());
+                    printmessage.put("TABLE_NAM", posOrderData.get(0).getTable_no());
+                    printmessage.put("BARCODE", posOrderData.get(0).getBarcode());
+                    printmessage.put("STATION", posOrderData.get(0).getPos_id());
+                    printmessage.put("ZONE", posOrderData.get(0).getZone());
+                    printmessage.put("REF_NUM", posOrderData.get(0).getBill_no());
+                    printmessage.put("STAFF", posOrderData.get(0).getStaff());
+                    printmessage.put("PERSON", String.valueOf(posOrderData.get(0).getPerson_num()));
+                    printmessage.put("ORDER_TYPE", posOrderData.get(0).getOrder_type());
+                    printmessage.put("POSDATE", posOrderData.get(0).getRt_op_time());
+
+                    String print = GetPrintOrReportStr.TranslateTableStyle(tableStyle, list, null, 1, printmessage);
+
+
+                    try {
+
+                        Thread.sleep(2000);
+
+                        String printMsg = PrintRxTxVirtaul.getInstance().PrinterCheck();
+                        if (AppUtils.isNotBlank(printMsg)) {
+                            Platform.runLater(() -> main.crateAlert("錯誤", "打印機異常", printMsg));
+
+
+                        } else {
+                            try {
+                                PrintRxTxVirtaul.getInstance().localPrint(print);
+                            } catch (IOException e) {
+                                Platform.runLater(() -> main.crateAlert("錯誤", "打印機異常", printMsg));
+                            }
+                            posOrderData.forEach(posDetail -> {
+                                PrintStateEnum oldPrintState = PrintStateEnum.getPrintStateEnumByValue(posDetail.getPrint_state());
+                                PosOrderDao.updataPrintState(PrintStateEnum.PRINTED, oldPrintState, posDetail.getBill_no(), posDetail.getOrder_idx(), posDetail.getType());
+                            });
+
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                } else {
+                    System.out.println("data_______________________");
+                    Platform.runLater(() -> main.getPosOrderData().add(posOrderData));
+                }
+
+            }
+
+
+        });
+
+
+    }
+
+    private String getPrintList(String orgString) {
+        String[] orgStringList = orgString.split(",");
+        String printList = "";
+        for (String prt : orgStringList) {
+            printList += "'" + prt + "',";
+        }
+
+        return printList.substring(0, printList.length() - 1);
+
+
+    }
+
+
+}
